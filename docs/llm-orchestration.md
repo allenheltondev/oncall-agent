@@ -6,6 +6,7 @@ Provider abstraction and orchestration layer for model-backed reasoning tasks.
 - `LlmClient` interface (`src/llm/types.ts`)
 - routing policy (`defaultModel` + per-task overrides)
 - prompt templates (`src/llm/prompt-templates.ts`)
+- RISEN system prompt string (`src/llm/system-prompt.ts`)
 - orchestration runtime (`src/llm/orchestrator.ts`)
 
 ## Task types

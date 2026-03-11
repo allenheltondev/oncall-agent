@@ -8,6 +8,10 @@ export type SetupModule = "momento" | "teleport" | "github" | "slack" | "llm" | 
 
 const ALL_MODULES: SetupModule[] = ["momento", "teleport", "github", "slack", "llm", "identity"];
 
+function defaultMomentoTopic(profile: string): string {
+  return `oncall-agent.${profile}.incidents`;
+}
+
 export interface SetupOptions {
   nonInteractive?: boolean;
   envFile?: string;
@@ -103,7 +107,7 @@ export async function runSetupWizard(opts: SetupOptions): Promise<void> {
 
     let momentoApiKey = current.MOMENTO_API_KEY ?? "";
     let momentoCacheName = current.MOMENTO_CACHE_NAME ?? "oncall-agent";
-    let momentoTopicName = current.MOMENTO_TOPIC_NAME ?? "incidents";
+    let momentoTopicName = current.MOMENTO_TOPIC_NAME ?? defaultMomentoTopic(profile);
     if (selected.has("momento")) {
       momentoApiKey = await promptIfNeeded(rl, "Momento API key", opts.momentoApiKey, momentoApiKey);
       momentoCacheName = await promptIfNeeded(rl, "Momento cache name", opts.momentoCacheName, momentoCacheName);
