@@ -12,6 +12,8 @@ export interface AppConfig {
     cluster?: string;
     audience: string;
     mockIdentity: boolean;
+    issuerCommandAws?: string;
+    issuerCommandGithub?: string;
   };
   github: {
     owner: string;
@@ -65,6 +67,8 @@ export function loadConfig(): AppConfig {
       cluster: env("TELEPORT_CLUSTER"),
       audience: env("TELEPORT_AUDIENCE", "oncall-agent")!,
       mockIdentity: envBool("TELEPORT_MOCK_IDENTITY", false),
+      issuerCommandAws: env("TELEPORT_ISSUER_COMMAND_AWS"),
+      issuerCommandGithub: env("TELEPORT_ISSUER_COMMAND_GITHUB"),
     },
     github: {
       owner: env("GITHUB_OWNER", "allenheltondev")!,
