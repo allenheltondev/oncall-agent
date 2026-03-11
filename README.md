@@ -57,6 +57,7 @@ Key variables:
 - Trust boundaries: `docs/trust-boundaries.md`
 - Runbook: `docs/ops-runbook.md`
 - LLM orchestration: `docs/llm-orchestration.md`
+- Codex provider: `docs/codex-provider.md`
 
 ## Identity mapping config
 - File: `config/identity-map.v1.json`
