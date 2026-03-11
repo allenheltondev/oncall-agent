@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFile, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { runSetupWizard } from "./wizard";
 
 describe("setup wizard", () => {
@@ -40,6 +41,30 @@ describe("setup wizard", () => {
     expect(env).toContain("SLACK_CHANNEL=#oncall");
     expect(map).toContain("identity-map.v1");
     expect(map).toContain("123456789012");
+
+    await rm(envFile, { force: true });
+    await rm(mapFile, { force: true });
+  });
+
+  test("respects module selection and can skip identity map", async () => {
+    const envFile = ".env.setup-modules-only";
+    const mapFile = "config/identity-map.modules-only.json";
+
+    await rm(envFile, { force: true });
+    await rm(mapFile, { force: true });
+
+    await runSetupWizard({
+      nonInteractive: true,
+      modules: "llm",
+      envFile,
+      identityMapPath: mapFile,
+      openaiApiKey: "sk-modules-only",
+      openaiModel: "gpt-5.3-codex",
+    });
+
+    const env = await readFile(envFile, "utf-8");
+    expect(env).toContain("OPENAI_API_KEY=sk-modules-only");
+    expect(existsSync(mapFile)).toBe(false);
 
     await rm(envFile, { force: true });
     await rm(mapFile, { force: true });
