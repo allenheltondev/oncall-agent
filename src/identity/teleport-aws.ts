@@ -1,4 +1,5 @@
 import type { AppConfig } from "../config/env";
+import { runTeleportIssuer } from "./teleport-issuer";
 
 export interface AwsRuntimeAccessRequest {
   scope: "cloudwatch:read" | "metrics:read" | "deployments:read";
@@ -33,9 +34,14 @@ export async function requestAwsRuntimeAccess(
     };
   }
 
-  // Placeholder for real Teleport-backed issuance flow.
-  // Intentionally fail closed until the integration is wired.
-  throw new Error(
-    `Teleport runtime AWS identity flow not wired yet for scope=${request.scope}. Refusing to continue with standing credentials.`,
+  if (!config.teleport.issuerCommandAws) {
+    throw new Error(
+      `Teleport AWS issuer command is not configured (TELEPORT_ISSUER_COMMAND_AWS). Refusing standing credentials for scope=${request.scope}.`,
+    );
+  }
+
+  return await runTeleportIssuer<AwsRuntimeAccessRequest, AwsRuntimeAccessGrant>(
+    config.teleport.issuerCommandAws,
+    request,
   );
 }

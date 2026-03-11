@@ -65,6 +65,7 @@ Key variables:
 - LLM orchestration: `docs/llm-orchestration.md`
 - Codex provider: `docs/codex-provider.md`
 - Momento live subscription: `docs/momento-subscription.md`
+- Teleport runtime issuance: `docs/teleport-runtime-issuance.md`
 
 ## Identity mapping config
 - File: `config/identity-map.v1.json`

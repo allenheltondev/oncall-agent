@@ -1,4 +1,5 @@
 import type { AppConfig } from "../config/env";
+import { runTeleportIssuer } from "./teleport-issuer";
 
 export interface GithubRuntimeAccessRequest {
   scope: "repo:read" | "repo:write" | "pr:create";
@@ -30,7 +31,14 @@ export async function requestGithubRuntimeAccess(
     };
   }
 
-  throw new Error(
-    `Teleport runtime GitHub identity flow not wired yet for scope=${request.scope}. Refusing standing SCM access.`,
+  if (!config.teleport.issuerCommandGithub) {
+    throw new Error(
+      `Teleport GitHub issuer command is not configured (TELEPORT_ISSUER_COMMAND_GITHUB). Refusing standing SCM access for scope=${request.scope}.`,
+    );
+  }
+
+  return await runTeleportIssuer<GithubRuntimeAccessRequest, GithubRuntimeAccessGrant>(
+    config.teleport.issuerCommandGithub,
+    request,
   );
 }
