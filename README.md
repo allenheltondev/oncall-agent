@@ -24,6 +24,8 @@ Or in a devcontainer:
 ## Scripts
 - `bun run dev` - watch mode
 - `bun run start` - one-shot run
+- `bun run cli -- setup` - interactive full setup wizard for Momento/Teleport/GitHub/Slack/LLM
+- `bun run cli -- setup --non-interactive --env-file .env --config config/identity-map.v1.json ...flags` - CI/scripted setup
 - `bun run cli -- config validate --config config/identity-map.v1.json` - validate identity map config
 - `bun run cli -- config llm set --api-key <key> --model gpt-5.3-codex` - configure Codex credentials/model
 - `bun run cli -- config llm show` - show current LLM config (API key masked)
