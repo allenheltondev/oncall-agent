@@ -12,6 +12,15 @@ bun install
 bun run dev
 ```
 
+Or with Docker Compose:
+```bash
+docker compose up --build
+```
+
+Or in a devcontainer:
+- Open in VS Code Dev Containers
+- Container runs `bun install` on create
+
 ## Scripts
 - `bun run dev` - watch mode
 - `bun run start` - one-shot run

@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  oncall-agent:
+    image: oven/bun:1
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command: ["bun", "run", "dev"]
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: info
+      TELEPORT_MOCK_IDENTITY: "true"
+      TELEPORT_PROXY: "teleport.example.com:443"
+      TELEPORT_CLUSTER: "main"
+      MOMENTO_CACHE_NAME: oncall-agent
+      MOMENTO_TOPIC_NAME: incidents
+      AWS_REGION: us-east-1
+      GITHUB_OWNER: allenheltondev
+      GITHUB_REPO: oncall-agent
