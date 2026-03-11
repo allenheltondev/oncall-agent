@@ -17,6 +17,7 @@ bun run dev
 - `bun run start` - one-shot run
 - `bun run typecheck` - TypeScript checks
 - `bun test` - unit tests
+- `bun run publish:simulate data/incidents/synthetic.failure.v1.json` - emit a fixture incident (dry-run without Momento key)
 
 ## Environment
 Copy `.env.example` and set values as needed.

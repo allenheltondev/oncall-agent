@@ -9,7 +9,8 @@
     "dev": "bun run --watch src/main.ts",
     "start": "bun run src/main.ts",
     "typecheck": "bun x tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "publish:simulate": "bun run src/publisher/simulator.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",

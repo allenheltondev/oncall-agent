@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "incident.v1",
+  "incidentId": "inc-cpu-0001",
+  "source": "cloudwatch",
+  "service": "api-gateway",
+  "severity": "high",
+  "summary": "CPU utilization above threshold for 5m",
+  "detectedAt": "2026-03-11T12:00:00Z",
+  "correlationId": "corr-cpu-0001"
+}

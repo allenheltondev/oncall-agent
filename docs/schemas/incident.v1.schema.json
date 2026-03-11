@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oncall-agent.dev/schemas/incident.v1.schema.json",
+  "title": "Incident Signal v1",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "incidentId",
+    "source",
+    "service",
+    "severity",
+    "summary",
+    "detectedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "incident.v1" },
+    "incidentId": { "type": "string", "minLength": 1 },
+    "source": {
+      "type": "string",
+      "enum": ["cloudwatch", "synthetic", "scheduled-health-check"]
+    },
+    "service": { "type": "string", "minLength": 1 },
+    "severity": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"]
+    },
+    "summary": { "type": "string", "minLength": 1 },
+    "detectedAt": { "type": "string", "format": "date-time" },
+    "correlationId": { "type": "string" }
+  },
+  "additionalProperties": false
+}
