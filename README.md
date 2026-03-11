@@ -49,3 +49,8 @@ Key variables:
 
 ## Architecture decisions
 - ADR-0001: `docs/adr/0001-system-architecture.md`
+
+## Operations docs
+- Architecture: `docs/architecture-overview.md`
+- Trust boundaries: `docs/trust-boundaries.md`
+- Runbook: `docs/ops-runbook.md`
