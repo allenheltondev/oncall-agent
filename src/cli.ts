@@ -4,6 +4,7 @@ import { startAgent } from "./agent/runtime";
 import { readFile, writeFile } from "node:fs/promises";
 import { runSetupWizard } from "./setup/wizard";
 import { runDoctor } from "./doctor";
+import { maskSecret } from "./security/secrets";
 
 interface CliOptions {
   configPath?: string;
@@ -119,12 +120,6 @@ async function writeEnvFile(path: string, values: Record<string, string>): Promi
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([k, v]) => `${k}=${v}`);
   await writeFile(path, `${lines.join("\n")}\n`, "utf-8");
-}
-
-function maskSecret(secret?: string): string | null {
-  if (!secret) return null;
-  if (secret.length <= 8) return "****";
-  return `${secret.slice(0, 4)}...${secret.slice(-4)}`;
 }
 
 export async function runCli(argv = Bun.argv.slice(2)): Promise<number> {

@@ -2,6 +2,7 @@ import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
+import { maskSecret } from "../security/secrets";
 
 export type SetupModule = "momento" | "teleport" | "github" | "slack" | "llm" | "identity";
 
@@ -210,7 +211,6 @@ export async function runSetupWizard(opts: SetupOptions): Promise<void> {
       await writeFile(identityMapPath, JSON.stringify(identityMap, null, 2), "utf-8");
     }
 
-    const mask = (v: string) => (v ? `${v.slice(0, 4)}...${v.slice(-4)}` : "(empty)");
     console.log(
       JSON.stringify(
         {
@@ -224,7 +224,7 @@ export async function runSetupWizard(opts: SetupOptions): Promise<void> {
           teleportCluster,
           slackChannel: slackChannel || null,
           openaiModel,
-          openaiApiKey: mask(openaiApiKey),
+          openaiApiKey: maskSecret(openaiApiKey) ?? "(empty)",
         },
         null,
         2,
