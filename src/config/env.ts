@@ -25,6 +25,10 @@ export interface AppConfig {
     model: string;
     baseUrl?: string;
   };
+  storage: {
+    mode: "json" | "sqlite";
+    sqlitePath: string;
+  };
 }
 
 const NODE_ENVS = new Set(["development", "test", "production"]);
@@ -79,6 +83,10 @@ export function loadConfig(): AppConfig {
       apiKey: env("OPENAI_API_KEY"),
       model: env("OPENAI_MODEL", "gpt-5.3-codex")!,
       baseUrl: env("OPENAI_BASE_URL"),
+    },
+    storage: {
+      mode: (env("STORAGE_MODE", "json") as "json" | "sqlite") ?? "json",
+      sqlitePath: env("SQLITE_PATH", "data/oncall-agent.db")!,
     },
   };
 }

@@ -20,14 +20,22 @@ import { evaluateRemediationGuardrails } from "../workflows/safety-guardrails";
 import { buildHypothesisHook, sendSlackHook } from "../workflows/slack-hooks";
 import { createLlmOrchestrator, maybeGenerateStatusSummary } from "../llm/service";
 import { startMomentoSubscriptionLoop } from "./momento-subscription";
+import { SqliteStore } from "../storage/sqlite";
 
 const TERMINAL_STATES: ReadonlySet<AgentState> = new Set(["DONE", "FAILED"]);
 
 export class AgentRuntime {
   private readonly llm;
+  private readonly sqliteStore: SqliteStore | null;
 
   constructor(private readonly config: AppConfig) {
     this.llm = createLlmOrchestrator(config);
+    this.sqliteStore =
+      config.storage.mode === "sqlite" ? new SqliteStore(config.storage.sqlitePath) : null;
+  }
+
+  async init(): Promise<void> {
+    await this.sqliteStore?.init();
   }
 
   private readonly queue: IncidentSignalV1[] = [];
@@ -290,6 +298,14 @@ export class AgentRuntime {
         error: next.error,
       }),
     );
+
+    this.sqliteStore?.upsertIncident({
+      incidentId,
+      service: next.incident.service,
+      correlationId: next.incident.correlationId,
+      state: next.state,
+      timestamp: new Date().toISOString(),
+    });
   }
 }
 
@@ -301,6 +317,7 @@ export async function startAgent(config: AppConfig): Promise<void> {
   );
 
   const runtime = new AgentRuntime(config);
+  await runtime.init();
 
   if (config.momento.apiKey) {
     const handle = await startMomentoSubscriptionLoop(config, runtime);
