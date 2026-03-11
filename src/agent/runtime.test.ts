@@ -2,11 +2,17 @@ import { describe, expect, test } from "bun:test";
 import { loadConfig } from "../config/env";
 import { AgentRuntime } from "./runtime";
 
+function prepareTestEnv(): void {
+  Bun.env.TELEPORT_PROXY = "teleport.example.com:443";
+  Bun.env.TELEPORT_CLUSTER = "main";
+  Bun.env.TELEPORT_MOCK_IDENTITY = "true";
+  delete Bun.env.OPENAI_API_KEY;
+  delete Bun.env.SLACK_WEBHOOK_URL;
+}
+
 describe("AgentRuntime", () => {
   test("deduplicates incident IDs", () => {
-    Bun.env.TELEPORT_PROXY = "teleport.example.com:443";
-    Bun.env.TELEPORT_CLUSTER = "main";
-    Bun.env.TELEPORT_MOCK_IDENTITY = "true";
+    prepareTestEnv();
     const runtime = new AgentRuntime(loadConfig());
     const incident = {
       schemaVersion: "incident.v1" as const,
@@ -24,9 +30,7 @@ describe("AgentRuntime", () => {
   });
 
   test("processes queued incident to DONE", async () => {
-    Bun.env.TELEPORT_PROXY = "teleport.example.com:443";
-    Bun.env.TELEPORT_CLUSTER = "main";
-    Bun.env.TELEPORT_MOCK_IDENTITY = "true";
+    prepareTestEnv();
     const runtime = new AgentRuntime(loadConfig());
     runtime.enqueue({
       schemaVersion: "incident.v1",
