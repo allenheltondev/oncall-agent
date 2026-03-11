@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "incident.v1",
+  "incidentId": "inc-anomaly-0001",
+  "source": "scheduled-health-check",
+  "service": "worker-jobs",
+  "severity": "medium",
+  "summary": "5xx error rate deviated from baseline",
+  "detectedAt": "2026-03-11T12:05:00Z",
+  "correlationId": "corr-anomaly-0001"
+}

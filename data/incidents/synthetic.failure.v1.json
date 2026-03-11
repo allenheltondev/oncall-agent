@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "incident.v1",
+  "incidentId": "inc-synth-0001",
+  "source": "synthetic",
+  "service": "oncall-agent-sim",
+  "severity": "critical",
+  "summary": "Injected failure: downstream dependency timeout",
+  "detectedAt": "2026-03-11T12:10:00Z",
+  "correlationId": "corr-synth-0001"
+}
