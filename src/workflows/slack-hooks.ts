@@ -1,4 +1,5 @@
 import type { Hypothesis } from "./hypothesis-engine";
+import { loadConfig } from "../config/env";
 
 export type SlackHookEvent =
   | "problem_detected"
@@ -16,10 +17,70 @@ export interface SlackHookPayload {
   details?: Record<string, unknown>;
 }
 
+async function postSlackWebhook(url: string, text: string): Promise<void> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Slack webhook failed: ${response.status} ${body}`);
+  }
+}
+
+function formatSlackText(payload: SlackHookPayload): string {
+  const lines: string[] = [];
+  lines.push(`*${payload.event}* — ${payload.message}`);
+  lines.push(`incident=${payload.incidentId}`);
+  if (payload.severity) lines.push(`severity=${payload.severity}`);
+  if (payload.service) lines.push(`service=${payload.service}`);
+  if (payload.correlationId) lines.push(`correlation=${payload.correlationId}`);
+  if (payload.details) lines.push(`details=${JSON.stringify(payload.details)}`);
+  return lines.join(" | ");
+}
+
 export async function sendSlackHook(payload: SlackHookPayload): Promise<void> {
-  // Placeholder transport for #15: print structured payload.
-  // Follow-up increment can post through real Slack API/webhook.
-  console.log(JSON.stringify({ transport: "slack.hook", ...payload }));
+  const config = loadConfig();
+  const webhookUrl = Bun.env.SLACK_WEBHOOK_URL;
+
+  if (!webhookUrl) {
+    console.log(JSON.stringify({ transport: "slack.hook", mode: "stdout", ...payload }));
+    return;
+  }
+
+  const text = formatSlackText(payload);
+  const maxAttempts = 3;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await postSlackWebhook(webhookUrl, text);
+      console.log(
+        JSON.stringify({
+          event: "slack.hook.delivered",
+          mode: "webhook",
+          channel: Bun.env.SLACK_CHANNEL ?? null,
+          nodeEnv: config.nodeEnv,
+          hookEvent: payload.event,
+          attempt,
+        }),
+      );
+      return;
+    } catch (error) {
+      lastError = error;
+      await Bun.sleep(200 * attempt);
+    }
+  }
+
+  console.error(
+    JSON.stringify({
+      event: "slack.hook.failed",
+      hookEvent: payload.event,
+      message: lastError instanceof Error ? lastError.message : "unknown slack delivery error",
+    }),
+  );
 }
 
 export function buildHypothesisHook(params: {
