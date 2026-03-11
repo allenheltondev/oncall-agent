@@ -1,4 +1,5 @@
 import type { LlmClient, LlmRequest, LlmResponse } from "../types";
+import { ONCALL_AGENT_SYSTEM_PROMPT } from "../system-prompt";
 
 export interface CodexClientOptions {
   apiKey: string;
@@ -35,7 +36,7 @@ export class CodexClient implements LlmClient {
           messages: [
             {
               role: "system",
-              content: "You are an incident-response coding assistant. Be concise and actionable.",
+              content: ONCALL_AGENT_SYSTEM_PROMPT,
             },
             {
               role: "user",
