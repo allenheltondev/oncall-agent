@@ -90,6 +90,31 @@ describe("cli", () => {
     await rm(configPath, { force: true });
   });
 
+  test("setup with module selection only writes selected areas", async () => {
+    const envFile = ".env.setup-modules-test";
+    await rm(envFile, { force: true });
+
+    const code = await runCli([
+      "setup",
+      "--non-interactive",
+      "--modules",
+      "llm",
+      "--env-file",
+      envFile,
+      "--openai-api-key",
+      "sk-modules",
+      "--openai-model",
+      "gpt-5.3-codex",
+    ]);
+
+    expect(code).toBe(0);
+    const env = await readFile(envFile, "utf-8");
+    expect(env).toContain("OPENAI_API_KEY=sk-modules");
+    expect(env).not.toContain("MOMENTO_API_KEY=");
+
+    await rm(envFile, { force: true });
+  });
+
   test("unknown command returns error", async () => {
     const code = await runCli(["wat"]);
     expect(code).toBe(1);

@@ -28,6 +28,7 @@ interface CliOptions {
   openaiModel?: string;
   openaiBaseUrl?: string;
   awsAccountId?: string;
+  modules?: string;
 }
 
 const DEFAULT_ENV_FILE = ".env";
@@ -67,6 +68,7 @@ function parseOptions(argv: string[]): CliOptions {
     else if (token === "--openai-model") options.openaiModel = value;
     else if (token === "--openai-base-url") options.openaiBaseUrl = value;
     else if (token === "--aws-account-id") options.awsAccountId = value;
+    else if (token === "--modules") options.modules = value;
     else continue;
 
     i += 1;
@@ -82,7 +84,7 @@ function usage(): string {
     "  oncall-agent config validate [--config <path>]",
     "  oncall-agent config llm show [--env-file <path>]",
     "  oncall-agent config llm set [--api-key <key>] [--model <model>] [--base-url <url>] [--env-file <path>]",
-    "  oncall-agent setup [--non-interactive ...flags]",
+    "  oncall-agent setup [--modules momento,teleport,...] [--non-interactive ...flags]",
     "  oncall-agent start [--config <path>]",
   ].join("\n");
 }
@@ -215,6 +217,7 @@ export async function runCli(argv = Bun.argv.slice(2)): Promise<number> {
       nonInteractive: opts.nonInteractive,
       envFile: opts.envFile,
       identityMapPath: opts.configPath,
+      modules: opts.modules,
       profile: opts.profile,
       momentoApiKey: opts.momentoApiKey,
       momentoCacheName: opts.momentoCacheName,
