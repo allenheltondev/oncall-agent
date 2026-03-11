@@ -11,6 +11,7 @@ export interface AppConfig {
     proxy?: string;
     cluster?: string;
     audience: string;
+    mockIdentity: boolean;
   };
   github: {
     owner: string;
@@ -24,6 +25,12 @@ const LOG_LEVELS = new Set(["debug", "info", "warn", "error"]);
 function env(name: string, fallback?: string): string | undefined {
   const value = Bun.env[name] ?? fallback;
   return value?.trim() ? value.trim() : undefined;
+}
+
+function envBool(name: string, fallback = false): boolean {
+  const value = env(name);
+  if (!value) return fallback;
+  return ["1", "true", "yes", "on"].includes(value.toLowerCase());
 }
 
 export function loadConfig(): AppConfig {
@@ -51,6 +58,7 @@ export function loadConfig(): AppConfig {
       proxy: env("TELEPORT_PROXY"),
       cluster: env("TELEPORT_CLUSTER"),
       audience: env("TELEPORT_AUDIENCE", "oncall-agent")!,
+      mockIdentity: envBool("TELEPORT_MOCK_IDENTITY", false),
     },
     github: {
       owner: env("GITHUB_OWNER", "allenheltondev")!,

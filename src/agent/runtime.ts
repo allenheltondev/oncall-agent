@@ -6,10 +6,13 @@ import {
   type AgentState,
   type IncidentProcessingRecord,
 } from "./state-machine";
+import { requestAwsRuntimeAccess } from "../identity/teleport-aws";
 
 const TERMINAL_STATES: ReadonlySet<AgentState> = new Set(["DONE", "FAILED"]);
 
 export class AgentRuntime {
+  constructor(private readonly config: AppConfig) {}
+
   private readonly queue: IncidentSignalV1[] = [];
   private readonly seenIncidentIds = new Set<string>();
   private readonly records = new Map<string, IncidentProcessingRecord>();
@@ -46,6 +49,11 @@ export class AgentRuntime {
 
     try {
       this.update(incidentId, "AUTH");
+      await requestAwsRuntimeAccess(this.config, {
+        scope: "cloudwatch:read",
+        reason: `incident:${record.incident.incidentId}`,
+      });
+
       this.update(incidentId, "INVESTIGATE");
       this.update(incidentId, "REPORT");
       this.update(incidentId, "DONE");
@@ -84,7 +92,7 @@ export async function startAgent(config: AppConfig): Promise<void> {
     `targets: momentoTopic=${config.momento.topicName} github=${config.github.owner}/${config.github.repo}`,
   );
 
-  const runtime = new AgentRuntime();
+  const runtime = new AgentRuntime(config);
   const accepted = runtime.enqueue({
     schemaVersion: "incident.v1",
     incidentId: "startup-healthcheck",
