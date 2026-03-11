@@ -12,6 +12,7 @@ import {
   assembleIncidentContext,
   persistIncidentContext,
 } from "../workflows/incident-context";
+import { generateHypotheses } from "../workflows/hypothesis-engine";
 
 const TERMINAL_STATES: ReadonlySet<AgentState> = new Set(["DONE", "FAILED"]);
 
@@ -73,6 +74,7 @@ export class AgentRuntime {
         evidence,
       });
       const contextPath = await persistIncidentContext(context);
+      const hypotheses = generateHypotheses(context);
 
       console.log(
         JSON.stringify({
@@ -84,6 +86,16 @@ export class AgentRuntime {
           hasDeploy: Boolean(evidence.deploy),
           errorCount: evidence.errors.length,
           contextPath,
+        }),
+      );
+
+      console.log(
+        JSON.stringify({
+          event: "incident.hypotheses.generated",
+          incidentId,
+          correlationId: record.incident.correlationId,
+          count: hypotheses.length,
+          top: hypotheses[0],
         }),
       );
 
