@@ -16,6 +16,7 @@ import { generateHypotheses } from "../workflows/hypothesis-engine";
 import { createRemediationProposal } from "../workflows/remediation";
 import { appendGovernanceEntry } from "../workflows/governance-ledger";
 import { evaluateRemediationGuardrails } from "../workflows/safety-guardrails";
+import { buildHypothesisHook, sendSlackHook } from "../workflows/slack-hooks";
 
 const TERMINAL_STATES: ReadonlySet<AgentState> = new Set(["DONE", "FAILED"]);
 
@@ -58,6 +59,15 @@ export class AgentRuntime {
 
     try {
       this.update(incidentId, "AUTH");
+      await sendSlackHook({
+        event: "problem_detected",
+        incidentId,
+        severity: record.incident.severity,
+        service: record.incident.service,
+        correlationId: record.incident.correlationId,
+        message: `Incident detected for ${record.incident.service}`,
+      });
+
       await requestAwsRuntimeAccess(this.config, {
         scope: "cloudwatch:read",
         reason: `incident:${record.incident.incidentId}`,
@@ -110,6 +120,13 @@ export class AgentRuntime {
           top: hypotheses[0],
         }),
       );
+      await sendSlackHook(
+        buildHypothesisHook({
+          incidentId,
+          correlationId: record.incident.correlationId,
+          topHypothesis: hypotheses[0],
+        }),
+      );
 
       this.update(incidentId, "REPORT");
 
@@ -138,6 +155,13 @@ export class AgentRuntime {
             reasons: guardrails.reasons,
           }),
         );
+        await sendSlackHook({
+          event: "resolution_outcome",
+          incidentId,
+          correlationId: record.incident.correlationId,
+          message: "Remediation skipped by guardrails",
+          details: { reasons: guardrails.reasons, outcome: "skipped" },
+        });
         this.update(incidentId, "DONE");
         return;
       }
@@ -166,6 +190,24 @@ export class AgentRuntime {
           patchSummary: proposal.patchSummary,
         }),
       );
+      await sendSlackHook({
+        event: "resolution_path_proposed",
+        incidentId,
+        correlationId: record.incident.correlationId,
+        message: "Remediation path proposed",
+        details: {
+          branchName: proposal.branchName,
+          prTitle: proposal.prTitle,
+          patchSummary: proposal.patchSummary,
+        },
+      });
+      await sendSlackHook({
+        event: "resolution_outcome",
+        incidentId,
+        correlationId: record.incident.correlationId,
+        message: "Remediation proposal generated",
+        details: { outcome: "proposal_generated" },
+      });
 
       this.update(incidentId, "DONE");
     } catch (error) {
