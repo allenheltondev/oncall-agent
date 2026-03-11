@@ -71,6 +71,7 @@ Key variables:
 - Secret hardening: `docs/security-secrets.md`
 - Production readiness checklist: `docs/production-readiness-checklist.md`
 - Staged go-live plan: `docs/staged-go-live-plan.md`
+- SQLite storage mode: `docs/sqlite-storage.md`
 
 ## Identity mapping config
 - File: `config/identity-map.v1.json`
