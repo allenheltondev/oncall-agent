@@ -25,6 +25,8 @@ Or in a devcontainer:
 - `bun run dev` - watch mode
 - `bun run start` - one-shot run
 - `bun run cli -- config validate --config config/identity-map.v1.json` - validate identity map config
+- `bun run cli -- config llm set --api-key <key> --model gpt-5.3-codex` - configure Codex credentials/model
+- `bun run cli -- config llm show` - show current LLM config (API key masked)
 - `bun run cli -- start --config config/identity-map.v1.json` - start agent with explicit config path check
 - `bun run typecheck` - TypeScript checks
 - `bun test` - unit tests
