@@ -33,7 +33,8 @@ Or in a devcontainer:
 - `bun run cli -- start --config config/identity-map.v1.json` - start agent with explicit config path check
 - `bun run typecheck` - TypeScript checks
 - `bun test` - unit tests
-- `bun run publish:simulate data/incidents/synthetic.failure.v1.json` - emit a fixture incident (dry-run without Momento key)
+- `bun run publish:simulate data/incidents/synthetic.failure.v1.json --dry-run` - emit a fixture incident in dry-run mode
+- `bun run publish:simulate data/incidents/synthetic.failure.v1.json --live` - publish fixture to real Momento topic (requires `MOMENTO_API_KEY`)
 
 ## Environment
 Copy `.env.example` and set values as needed.
