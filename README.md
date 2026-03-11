@@ -24,6 +24,8 @@ Or in a devcontainer:
 ## Scripts
 - `bun run dev` - watch mode
 - `bun run start` - one-shot run
+- `bun run cli -- config validate --config config/identity-map.v1.json` - validate identity map config
+- `bun run cli -- start --config config/identity-map.v1.json` - start agent with explicit config path check
 - `bun run typecheck` - TypeScript checks
 - `bun test` - unit tests
 - `bun run publish:simulate data/incidents/synthetic.failure.v1.json` - emit a fixture incident (dry-run without Momento key)

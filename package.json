@@ -5,9 +5,13 @@
   "type": "module",
   "private": true,
   "module": "src/main.ts",
+  "bin": {
+    "oncall-agent": "src/cli.ts"
+  },
   "scripts": {
     "dev": "bun run --watch src/main.ts",
     "start": "bun run src/main.ts",
+    "cli": "bun run src/cli.ts",
     "typecheck": "bun x tsc --noEmit",
     "test": "bun test",
     "publish:simulate": "bun run src/publisher/simulator.ts"
