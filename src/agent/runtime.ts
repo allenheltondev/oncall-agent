@@ -15,6 +15,7 @@ import {
 import { generateHypotheses } from "../workflows/hypothesis-engine";
 import { createRemediationProposal } from "../workflows/remediation";
 import { appendGovernanceEntry } from "../workflows/governance-ledger";
+import { evaluateRemediationGuardrails } from "../workflows/safety-guardrails";
 
 const TERMINAL_STATES: ReadonlySet<AgentState> = new Set(["DONE", "FAILED"]);
 
@@ -111,6 +112,35 @@ export class AgentRuntime {
       );
 
       this.update(incidentId, "REPORT");
+
+      const preview = hypotheses[0]
+        ? `Apply guarded fallback + timeout handling for suspected cause: ${hypotheses[0].id}`
+        : "Apply observability-focused defensive patch";
+      const guardrails = evaluateRemediationGuardrails(context, hypotheses, preview);
+
+      if (!guardrails.allowed) {
+        await appendGovernanceEntry({
+          timestamp: new Date().toISOString(),
+          incidentId,
+          correlationId: record.incident.correlationId,
+          action: "remediation.proposal",
+          identityScope: "pr:create",
+          authDecision: "deny",
+          outcome: "failure",
+          details: { reasons: guardrails.reasons },
+        });
+
+        console.log(
+          JSON.stringify({
+            event: "incident.remediation.skipped",
+            incidentId,
+            correlationId: record.incident.correlationId,
+            reasons: guardrails.reasons,
+          }),
+        );
+        this.update(incidentId, "DONE");
+        return;
+      }
 
       const proposal = await createRemediationProposal(this.config, context, hypotheses);
       await appendGovernanceEntry({
