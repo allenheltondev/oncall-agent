@@ -9,11 +9,51 @@ export interface RemediationExecutionResult {
   prUrl?: string;
 }
 
+export interface RemediationExecutionOptions {
+  repoPath?: string;
+  openPullRequest?: boolean;
+  expectedRepo?: string; // owner/repo
+  baseBranch?: string;
+  allowDirtyWorktree?: boolean;
+}
+
+export function parseGithubRepoFromRemote(remoteUrl: string): string | null {
+  const trimmed = remoteUrl.trim();
+  const match = trimmed.match(/github\.com[:/]([^/]+\/[^/.]+)(?:\.git)?$/i);
+  return match?.[1]?.toLowerCase() ?? null;
+}
+
+async function ensureRepositoryBinding(repoPath: string, expectedRepo?: string): Promise<void> {
+  if (!expectedRepo) return;
+
+  const remote = (await $`git -C ${repoPath} remote get-url origin`.text()).trim();
+  const parsed = parseGithubRepoFromRemote(remote);
+  if (!parsed || parsed !== expectedRepo.toLowerCase()) {
+    throw new Error(
+      `Repository binding mismatch: expected ${expectedRepo}, found ${parsed ?? remote}`,
+    );
+  }
+}
+
+async function ensureCleanWorktree(repoPath: string, allowDirty = false): Promise<void> {
+  if (allowDirty) return;
+  const status = (await $`git -C ${repoPath} status --porcelain`.text()).trim();
+  if (status.length > 0) {
+    throw new Error("Working tree is not clean; refusing remediation execution");
+  }
+}
+
 export async function executeRemediationProposal(
   proposal: RemediationProposal,
-  opts: { repoPath?: string; openPullRequest?: boolean } = {},
+  opts: RemediationExecutionOptions = {},
 ): Promise<RemediationExecutionResult> {
   const repoPath = opts.repoPath ?? process.cwd();
+  const expectedRepo = opts.expectedRepo;
+  const baseBranch = opts.baseBranch ?? "main";
+
+  await ensureRepositoryBinding(repoPath, expectedRepo);
+  await ensureCleanWorktree(repoPath, opts.allowDirtyWorktree);
+
   const artifactsDir = join(repoPath, "artifacts", "remediation");
   await mkdir(artifactsDir, { recursive: true });
 
@@ -35,11 +75,17 @@ export async function executeRemediationProposal(
 
   let prUrl: string | undefined;
   if (opts.openPullRequest) {
+    if (!expectedRepo) {
+      throw new Error("expectedRepo is required when openPullRequest=true");
+    }
+
     try {
-      const out = await $`gh pr create --repo allenheltondev/oncall-agent --base main --head ${proposal.branchName} --title ${proposal.prTitle} --body ${proposal.prBody}`.text();
+      const out = await $`gh pr create --repo ${expectedRepo} --base ${baseBranch} --head ${proposal.branchName} --title ${proposal.prTitle} --body ${proposal.prBody}`.text();
       prUrl = out.trim().split(/\s+/).find((v) => v.startsWith("http"));
-    } catch {
-      // leave undefined; caller can handle partial execution
+    } catch (error) {
+      throw new Error(
+        `Remediation branch pushed but PR creation failed: ${error instanceof Error ? error.message : "unknown"}`,
+      );
     }
   }
 
