@@ -17,6 +17,12 @@ export interface AppConfig {
     owner: string;
     repo: string;
   };
+  llm: {
+    provider: "codex";
+    apiKey?: string;
+    model: string;
+    baseUrl?: string;
+  };
 }
 
 const NODE_ENVS = new Set(["development", "test", "production"]);
@@ -63,6 +69,12 @@ export function loadConfig(): AppConfig {
     github: {
       owner: env("GITHUB_OWNER", "allenheltondev")!,
       repo: env("GITHUB_REPO", "oncall-agent")!,
+    },
+    llm: {
+      provider: "codex",
+      apiKey: env("OPENAI_API_KEY"),
+      model: env("OPENAI_MODEL", "gpt-5.3-codex")!,
+      baseUrl: env("OPENAI_BASE_URL"),
     },
   };
 }

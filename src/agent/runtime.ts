@@ -17,11 +17,16 @@ import { createRemediationProposal } from "../workflows/remediation";
 import { appendGovernanceEntry } from "../workflows/governance-ledger";
 import { evaluateRemediationGuardrails } from "../workflows/safety-guardrails";
 import { buildHypothesisHook, sendSlackHook } from "../workflows/slack-hooks";
+import { createLlmOrchestrator, maybeGenerateStatusSummary } from "../llm/service";
 
 const TERMINAL_STATES: ReadonlySet<AgentState> = new Set(["DONE", "FAILED"]);
 
 export class AgentRuntime {
-  constructor(private readonly config: AppConfig) {}
+  private readonly llm;
+
+  constructor(private readonly config: AppConfig) {
+    this.llm = createLlmOrchestrator(config);
+  }
 
   private readonly queue: IncidentSignalV1[] = [];
   private readonly seenIncidentIds = new Set<string>();
@@ -129,6 +134,23 @@ export class AgentRuntime {
       );
 
       this.update(incidentId, "REPORT");
+
+      const llmSummary = await maybeGenerateStatusSummary(this.llm, {
+        incidentId,
+        service: record.incident.service,
+        correlationId: record.incident.correlationId,
+        topHypothesis: hypotheses[0],
+      });
+      if (llmSummary) {
+        console.log(
+          JSON.stringify({
+            event: "incident.status_summary.generated",
+            incidentId,
+            correlationId: record.incident.correlationId,
+            summary: llmSummary,
+          }),
+        );
+      }
 
       const preview = hypotheses[0]
         ? `Apply guarded fallback + timeout handling for suspected cause: ${hypotheses[0].id}`
