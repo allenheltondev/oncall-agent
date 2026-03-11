@@ -56,6 +56,7 @@ Key variables:
 - Architecture: `docs/architecture-overview.md`
 - Trust boundaries: `docs/trust-boundaries.md`
 - Runbook: `docs/ops-runbook.md`
+- LLM orchestration: `docs/llm-orchestration.md`
 
 ## Identity mapping config
 - File: `config/identity-map.v1.json`
