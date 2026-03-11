@@ -8,6 +8,10 @@ import {
 } from "./state-machine";
 import { requestAwsRuntimeAccess } from "../identity/teleport-aws";
 import { collectInvestigationEvidence } from "../workflows/investigation-adapters";
+import {
+  assembleIncidentContext,
+  persistIncidentContext,
+} from "../workflows/incident-context";
 
 const TERMINAL_STATES: ReadonlySet<AgentState> = new Set(["DONE", "FAILED"]);
 
@@ -62,6 +66,14 @@ export class AgentRuntime {
         correlationId: record.incident.correlationId,
       });
 
+      const context = assembleIncidentContext({
+        incidentId: record.incident.incidentId,
+        service: record.incident.service,
+        correlationId: record.incident.correlationId,
+        evidence,
+      });
+      const contextPath = await persistIncidentContext(context);
+
       console.log(
         JSON.stringify({
           event: "incident.investigation.evidence",
@@ -71,6 +83,7 @@ export class AgentRuntime {
           hasMetrics: Boolean(evidence.metrics),
           hasDeploy: Boolean(evidence.deploy),
           errorCount: evidence.errors.length,
+          contextPath,
         }),
       );
 
