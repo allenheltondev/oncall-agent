@@ -18,6 +18,7 @@ import { appendGovernanceEntry } from "../workflows/governance-ledger";
 import { evaluateRemediationGuardrails } from "../workflows/safety-guardrails";
 import { buildHypothesisHook, sendSlackHook } from "../workflows/slack-hooks";
 import { createLlmOrchestrator, maybeGenerateStatusSummary } from "../llm/service";
+import { startMomentoSubscriptionLoop } from "./momento-subscription";
 
 const TERMINAL_STATES: ReadonlySet<AgentState> = new Set(["DONE", "FAILED"]);
 
@@ -268,6 +269,28 @@ export async function startAgent(config: AppConfig): Promise<void> {
   );
 
   const runtime = new AgentRuntime(config);
+
+  if (config.momento.apiKey) {
+    const handle = await startMomentoSubscriptionLoop(config, runtime);
+
+    const shutdown = async () => {
+      await handle.close();
+      process.exit(0);
+    };
+
+    process.once("SIGINT", () => {
+      void shutdown();
+    });
+    process.once("SIGTERM", () => {
+      void shutdown();
+    });
+
+    await new Promise(() => {
+      // Keep process alive while subscription loop runs.
+    });
+    return;
+  }
+
   const accepted = runtime.enqueue({
     schemaVersion: "incident.v1",
     incidentId: "startup-healthcheck",

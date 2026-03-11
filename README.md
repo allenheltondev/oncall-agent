@@ -63,6 +63,7 @@ Key variables:
 - Runbook: `docs/ops-runbook.md`
 - LLM orchestration: `docs/llm-orchestration.md`
 - Codex provider: `docs/codex-provider.md`
+- Momento live subscription: `docs/momento-subscription.md`
 
 ## Identity mapping config
 - File: `config/identity-map.v1.json`
