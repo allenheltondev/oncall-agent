@@ -2,6 +2,7 @@ import { loadConfig } from "./config/env";
 import { loadIdentityMap } from "./config/identity-map";
 import { startAgent } from "./agent/runtime";
 import { readFile, writeFile } from "node:fs/promises";
+import { runSetupWizard } from "./setup/wizard";
 
 interface CliOptions {
   configPath?: string;
@@ -9,6 +10,24 @@ interface CliOptions {
   apiKey?: string;
   model?: string;
   baseUrl?: string;
+  nonInteractive?: boolean;
+  profile?: string;
+  momentoApiKey?: string;
+  momentoCacheName?: string;
+  momentoTopicName?: string;
+  teleportProxy?: string;
+  teleportCluster?: string;
+  teleportAudience?: string;
+  teleportMockIdentity?: string;
+  githubOwner?: string;
+  githubRepo?: string;
+  githubBaseBranch?: string;
+  slackToken?: string;
+  slackChannel?: string;
+  openaiApiKey?: string;
+  openaiModel?: string;
+  openaiBaseUrl?: string;
+  awsAccountId?: string;
 }
 
 const DEFAULT_ENV_FILE = ".env";
@@ -17,25 +36,40 @@ function parseOptions(argv: string[]): CliOptions {
   const options: CliOptions = {};
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i];
+
+    if (token === "--non-interactive") {
+      options.nonInteractive = true;
+      continue;
+    }
+
     const value = argv[i + 1];
     if (!value) continue;
 
-    if (token === "--config") {
-      options.configPath = value;
-      i += 1;
-    } else if (token === "--env-file") {
-      options.envFile = value;
-      i += 1;
-    } else if (token === "--api-key") {
-      options.apiKey = value;
-      i += 1;
-    } else if (token === "--model") {
-      options.model = value;
-      i += 1;
-    } else if (token === "--base-url") {
-      options.baseUrl = value;
-      i += 1;
-    }
+    if (token === "--config") options.configPath = value;
+    else if (token === "--env-file") options.envFile = value;
+    else if (token === "--api-key") options.apiKey = value;
+    else if (token === "--model") options.model = value;
+    else if (token === "--base-url") options.baseUrl = value;
+    else if (token === "--profile") options.profile = value;
+    else if (token === "--momento-api-key") options.momentoApiKey = value;
+    else if (token === "--momento-cache") options.momentoCacheName = value;
+    else if (token === "--momento-topic") options.momentoTopicName = value;
+    else if (token === "--teleport-proxy") options.teleportProxy = value;
+    else if (token === "--teleport-cluster") options.teleportCluster = value;
+    else if (token === "--teleport-audience") options.teleportAudience = value;
+    else if (token === "--teleport-mock") options.teleportMockIdentity = value;
+    else if (token === "--github-owner") options.githubOwner = value;
+    else if (token === "--github-repo") options.githubRepo = value;
+    else if (token === "--github-base-branch") options.githubBaseBranch = value;
+    else if (token === "--slack-token") options.slackToken = value;
+    else if (token === "--slack-channel") options.slackChannel = value;
+    else if (token === "--openai-api-key") options.openaiApiKey = value;
+    else if (token === "--openai-model") options.openaiModel = value;
+    else if (token === "--openai-base-url") options.openaiBaseUrl = value;
+    else if (token === "--aws-account-id") options.awsAccountId = value;
+    else continue;
+
+    i += 1;
   }
   return options;
 }
@@ -48,6 +82,7 @@ function usage(): string {
     "  oncall-agent config validate [--config <path>]",
     "  oncall-agent config llm show [--env-file <path>]",
     "  oncall-agent config llm set [--api-key <key>] [--model <model>] [--base-url <url>] [--env-file <path>]",
+    "  oncall-agent setup [--non-interactive ...flags]",
     "  oncall-agent start [--config <path>]",
   ].join("\n");
 }
@@ -172,6 +207,33 @@ export async function runCli(argv = Bun.argv.slice(2)): Promise<number> {
     console.error("Unknown config subcommand");
     console.log(usage());
     return 1;
+  }
+
+  if (command === "setup") {
+    const opts = parseOptions([subcommand, ...rest].filter(Boolean) as string[]);
+    await runSetupWizard({
+      nonInteractive: opts.nonInteractive,
+      envFile: opts.envFile,
+      identityMapPath: opts.configPath,
+      profile: opts.profile,
+      momentoApiKey: opts.momentoApiKey,
+      momentoCacheName: opts.momentoCacheName,
+      momentoTopicName: opts.momentoTopicName,
+      teleportProxy: opts.teleportProxy,
+      teleportCluster: opts.teleportCluster,
+      teleportAudience: opts.teleportAudience,
+      teleportMockIdentity: opts.teleportMockIdentity,
+      githubOwner: opts.githubOwner,
+      githubRepo: opts.githubRepo,
+      githubBaseBranch: opts.githubBaseBranch,
+      slackToken: opts.slackToken,
+      slackChannel: opts.slackChannel,
+      openaiApiKey: opts.openaiApiKey,
+      openaiModel: opts.openaiModel,
+      openaiBaseUrl: opts.openaiBaseUrl,
+      awsAccountId: opts.awsAccountId,
+    });
+    return 0;
   }
 
   if (command === "start") {
