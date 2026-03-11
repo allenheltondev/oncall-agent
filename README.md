@@ -69,6 +69,8 @@ Key variables:
 - Teleport runtime issuance: `docs/teleport-runtime-issuance.md`
 - Remediation execution: `docs/remediation-execution.md`
 - Secret hardening: `docs/security-secrets.md`
+- Production readiness checklist: `docs/production-readiness-checklist.md`
+- Staged go-live plan: `docs/staged-go-live-plan.md`
 
 ## Identity mapping config
 - File: `config/identity-map.v1.json`
