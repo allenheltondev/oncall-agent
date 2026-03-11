@@ -3,6 +3,7 @@ import { loadIdentityMap } from "./config/identity-map";
 import { startAgent } from "./agent/runtime";
 import { readFile, writeFile } from "node:fs/promises";
 import { runSetupWizard } from "./setup/wizard";
+import { runDoctor } from "./doctor";
 
 interface CliOptions {
   configPath?: string;
@@ -85,6 +86,7 @@ function usage(): string {
     "  oncall-agent config llm show [--env-file <path>]",
     "  oncall-agent config llm set [--api-key <key>] [--model <model>] [--base-url <url>] [--env-file <path>]",
     "  oncall-agent setup [--modules momento,teleport,...] [--non-interactive ...flags]",
+    "  oncall-agent doctor",
     "  oncall-agent start [--config <path>]",
   ].join("\n");
 }
@@ -237,6 +239,12 @@ export async function runCli(argv = Bun.argv.slice(2)): Promise<number> {
       awsAccountId: opts.awsAccountId,
     });
     return 0;
+  }
+
+  if (command === "doctor") {
+    const result = await runDoctor();
+    console.log(JSON.stringify(result, null, 2));
+    return result.ok ? 0 : 1;
   }
 
   if (command === "start") {
