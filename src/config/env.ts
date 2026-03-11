@@ -18,6 +18,7 @@ export interface AppConfig {
   github: {
     owner: string;
     repo: string;
+    baseBranch: string;
   };
   llm: {
     provider: "codex";
@@ -77,6 +78,7 @@ export function loadConfig(): AppConfig {
     github: {
       owner: env("GITHUB_OWNER", "allenheltondev")!,
       repo: env("GITHUB_REPO", "oncall-agent")!,
+      baseBranch: env("GITHUB_BASE_BRANCH", "main")!,
     },
     llm: {
       provider: "codex",

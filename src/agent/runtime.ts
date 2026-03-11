@@ -237,6 +237,10 @@ export class AgentRuntime {
       if (shouldExecute) {
         const execution = await executeRemediationProposal(proposal, {
           openPullRequest: (Bun.env.REMEDIATION_OPEN_PR ?? "false").toLowerCase() === "true",
+          expectedRepo: `${this.config.github.owner}/${this.config.github.repo}`,
+          baseBranch: this.config.github.baseBranch,
+          allowDirtyWorktree:
+            (Bun.env.REMEDIATION_ALLOW_DIRTY_WORKTREE ?? "false").toLowerCase() === "true",
         });
 
         console.log(
