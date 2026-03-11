@@ -1,2 +1,41 @@
 # oncall-agent
-Local persistent on-call incident response agent with runtime identity and scoped authority
+
+Local persistent on-call incident response agent with runtime identity and scoped authority.
+
+## Stack
+- Runtime: **Bun**
+- Language: **TypeScript**
+
+## Quick start
+```bash
+bun install
+bun run dev
+```
+
+## Scripts
+- `bun run dev` - watch mode
+- `bun run start` - one-shot run
+- `bun run typecheck` - TypeScript checks
+- `bun test` - unit tests
+
+## Environment
+Copy `.env.example` and set values as needed.
+
+Key variables:
+- `MOMENTO_API_KEY`, `MOMENTO_CACHE_NAME`, `MOMENTO_TOPIC_NAME`
+- `TELEPORT_PROXY`, `TELEPORT_CLUSTER`, `TELEPORT_AUDIENCE`
+- `AWS_REGION`
+- `GITHUB_OWNER`, `GITHUB_REPO`
+
+## Initial structure
+- `src/agent` - persistent runtime loop
+- `src/publisher` - incident signal publisher (Momento)
+- `src/identity` - Teleport runtime identity flows
+- `src/workflows` - investigation/remediation workflows
+- `src/types` - shared contracts
+- `src/config` - runtime config loading and validation
+- `docs` - architecture/ADR/runbooks
+- `infra` - infra assets
+
+## Architecture decisions
+- ADR-0001: `docs/adr/0001-system-architecture.md`

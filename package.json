@@ -1,0 +1,18 @@
+{
+  "name": "oncall-agent",
+  "version": "0.1.0",
+  "description": "Local persistent on-call incident response agent with runtime identity and scoped authority",
+  "type": "module",
+  "private": true,
+  "module": "src/main.ts",
+  "scripts": {
+    "dev": "bun run --watch src/main.ts",
+    "start": "bun run src/main.ts",
+    "typecheck": "bun x tsc --noEmit",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.2"
+  }
+}
