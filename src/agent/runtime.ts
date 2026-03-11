@@ -14,6 +14,7 @@ import {
 } from "../workflows/incident-context";
 import { generateHypotheses } from "../workflows/hypothesis-engine";
 import { createRemediationProposal } from "../workflows/remediation";
+import { appendGovernanceEntry } from "../workflows/governance-ledger";
 
 const TERMINAL_STATES: ReadonlySet<AgentState> = new Set(["DONE", "FAILED"]);
 
@@ -60,6 +61,15 @@ export class AgentRuntime {
         scope: "cloudwatch:read",
         reason: `incident:${record.incident.incidentId}`,
       });
+      await appendGovernanceEntry({
+        timestamp: new Date().toISOString(),
+        incidentId,
+        correlationId: record.incident.correlationId,
+        action: "identity.request.aws",
+        identityScope: "cloudwatch:read",
+        authDecision: "allow",
+        outcome: "success",
+      });
 
       this.update(incidentId, "INVESTIGATE");
       const evidence = await collectInvestigationEvidence(this.config, {
@@ -103,6 +113,19 @@ export class AgentRuntime {
       this.update(incidentId, "REPORT");
 
       const proposal = await createRemediationProposal(this.config, context, hypotheses);
+      await appendGovernanceEntry({
+        timestamp: new Date().toISOString(),
+        incidentId,
+        correlationId: record.incident.correlationId,
+        action: "remediation.proposal",
+        identityScope: "pr:create",
+        authDecision: "allow",
+        outcome: "success",
+        details: {
+          branchName: proposal.branchName,
+          prTitle: proposal.prTitle,
+        },
+      });
       console.log(
         JSON.stringify({
           event: "incident.remediation.proposal",
