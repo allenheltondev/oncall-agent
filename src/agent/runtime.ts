@@ -7,6 +7,7 @@ import {
   type IncidentProcessingRecord,
 } from "./state-machine";
 import { requestAwsRuntimeAccess } from "../identity/teleport-aws";
+import { collectInvestigationEvidence } from "../workflows/investigation-adapters";
 
 const TERMINAL_STATES: ReadonlySet<AgentState> = new Set(["DONE", "FAILED"]);
 
@@ -55,6 +56,24 @@ export class AgentRuntime {
       });
 
       this.update(incidentId, "INVESTIGATE");
+      const evidence = await collectInvestigationEvidence(this.config, {
+        incidentId: record.incident.incidentId,
+        service: record.incident.service,
+        correlationId: record.incident.correlationId,
+      });
+
+      console.log(
+        JSON.stringify({
+          event: "incident.investigation.evidence",
+          incidentId,
+          correlationId: record.incident.correlationId,
+          hasLogs: Boolean(evidence.logs),
+          hasMetrics: Boolean(evidence.metrics),
+          hasDeploy: Boolean(evidence.deploy),
+          errorCount: evidence.errors.length,
+        }),
+      );
+
       this.update(incidentId, "REPORT");
       this.update(incidentId, "DONE");
     } catch (error) {
