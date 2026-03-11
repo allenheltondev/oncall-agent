@@ -1,0 +1,15 @@
+{
+  "name": "oncall-agent",
+  "image": "oven/bun:1",
+  "workspaceFolder": "/workspace/oncall-agent",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/oncall-agent,type=bind",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "biomejs.biome",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  },
+  "postCreateCommand": "bun install"
+}
