@@ -54,3 +54,7 @@ Key variables:
 - Architecture: `docs/architecture-overview.md`
 - Trust boundaries: `docs/trust-boundaries.md`
 - Runbook: `docs/ops-runbook.md`
+
+## Identity mapping config
+- File: `config/identity-map.v1.json`
+- Purpose: pair AWS account/roles with GitHub target repo and Teleport identity context per environment
