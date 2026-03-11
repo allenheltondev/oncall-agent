@@ -13,6 +13,7 @@ import {
   persistIncidentContext,
 } from "../workflows/incident-context";
 import { generateHypotheses } from "../workflows/hypothesis-engine";
+import { createRemediationProposal } from "../workflows/remediation";
 
 const TERMINAL_STATES: ReadonlySet<AgentState> = new Set(["DONE", "FAILED"]);
 
@@ -100,6 +101,19 @@ export class AgentRuntime {
       );
 
       this.update(incidentId, "REPORT");
+
+      const proposal = await createRemediationProposal(this.config, context, hypotheses);
+      console.log(
+        JSON.stringify({
+          event: "incident.remediation.proposal",
+          incidentId,
+          correlationId: record.incident.correlationId,
+          branchName: proposal.branchName,
+          prTitle: proposal.prTitle,
+          patchSummary: proposal.patchSummary,
+        }),
+      );
+
       this.update(incidentId, "DONE");
     } catch (error) {
       this.update(
