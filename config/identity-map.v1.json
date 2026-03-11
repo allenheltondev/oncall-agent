@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "identity-map.v1",
+  "environments": [
+    {
+      "name": "dev",
+      "aws": {
+        "accountId": "123456789012",
+        "allowedRoleArns": [
+          "arn:aws:iam::123456789012:role/oncall-agent-dev-read"
+        ]
+      },
+      "github": {
+        "owner": "allenheltondev",
+        "repo": "oncall-agent",
+        "baseBranch": "main"
+      },
+      "teleport": {
+        "proxy": "teleport.example.com:443",
+        "cluster": "main",
+        "audience": "oncall-agent"
+      }
+    }
+  ]
+}
