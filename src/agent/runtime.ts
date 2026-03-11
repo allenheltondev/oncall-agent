@@ -14,6 +14,7 @@ import {
 } from "../workflows/incident-context";
 import { generateHypotheses } from "../workflows/hypothesis-engine";
 import { createRemediationProposal } from "../workflows/remediation";
+import { executeRemediationProposal } from "../workflows/remediation-execution";
 import { appendGovernanceEntry } from "../workflows/governance-ledger";
 import { evaluateRemediationGuardrails } from "../workflows/safety-guardrails";
 import { buildHypothesisHook, sendSlackHook } from "../workflows/slack-hooks";
@@ -224,13 +225,44 @@ export class AgentRuntime {
           patchSummary: proposal.patchSummary,
         },
       });
-      await sendSlackHook({
-        event: "resolution_outcome",
-        incidentId,
-        correlationId: record.incident.correlationId,
-        message: "Remediation proposal generated",
-        details: { outcome: "proposal_generated" },
-      });
+      const shouldExecute = (Bun.env.REMEDIATION_EXECUTE ?? "false").toLowerCase() === "true";
+      if (shouldExecute) {
+        const execution = await executeRemediationProposal(proposal, {
+          openPullRequest: (Bun.env.REMEDIATION_OPEN_PR ?? "false").toLowerCase() === "true",
+        });
+
+        console.log(
+          JSON.stringify({
+            event: "incident.remediation.executed",
+            incidentId,
+            correlationId: record.incident.correlationId,
+            branchName: execution.branchName,
+            commitSha: execution.commitSha,
+            prUrl: execution.prUrl,
+          }),
+        );
+
+        await sendSlackHook({
+          event: "resolution_outcome",
+          incidentId,
+          correlationId: record.incident.correlationId,
+          message: "Remediation executed",
+          details: {
+            outcome: "executed",
+            branchName: execution.branchName,
+            commitSha: execution.commitSha,
+            prUrl: execution.prUrl,
+          },
+        });
+      } else {
+        await sendSlackHook({
+          event: "resolution_outcome",
+          incidentId,
+          correlationId: record.incident.correlationId,
+          message: "Remediation proposal generated",
+          details: { outcome: "proposal_generated" },
+        });
+      }
 
       this.update(incidentId, "DONE");
     } catch (error) {
