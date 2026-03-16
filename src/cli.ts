@@ -1,6 +1,7 @@
 import { loadConfig } from "./config/env";
 import { loadIdentityMap } from "./config/identity-map";
 import { startAgent } from "./agent/runtime";
+import { startChat } from "./agent/chat";
 import { readFile, writeFile } from "node:fs/promises";
 import { runSetupWizard } from "./setup/wizard";
 import { runDoctor } from "./doctor";
@@ -98,6 +99,7 @@ function usage(): string {
     "  oncall-agent teleport status",
     "  oncall-agent teleport login",
     "  oncall-agent github verify",
+    "  oncall-agent chat",
     "  oncall-agent setup [--modules momento,teleport,...] [--non-interactive ...flags]",
     "  oncall-agent doctor",
     "  oncall-agent start [--config <path>]",
@@ -294,6 +296,12 @@ export async function runCli(argv = Bun.argv.slice(2)): Promise<number> {
 
     console.error(`Unknown github subcommand: ${subcommand}`);
     return 1;
+  }
+
+  if (command === "chat") {
+    const config = await loadConfig();
+    await startChat(config);
+    return 0;
   }
 
   if (command === "start") {

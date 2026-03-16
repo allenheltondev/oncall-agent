@@ -19,23 +19,25 @@ import { appendGovernanceEntry } from "../workflows/governance-ledger";
 import { evaluateRemediationGuardrails } from "../workflows/safety-guardrails";
 import { buildHypothesisHook, sendSlackHook } from "../workflows/slack-hooks";
 import { createLlmOrchestrator, maybeGenerateStatusSummary } from "../llm/service";
+import { LlmOrchestrator } from "../llm/orchestrator";
 import { startMomentoSubscriptionLoop } from "./momento-subscription";
 import { SqliteStore } from "../storage/sqlite";
 
 const TERMINAL_STATES: ReadonlySet<AgentState> = new Set(["DONE", "FAILED"]);
 
 export class AgentRuntime {
-  private readonly llm;
+  private llm: LlmOrchestrator | null = null;
   private readonly sqliteStore: SqliteStore | null;
 
   constructor(private readonly config: AppConfig) {
-    this.llm = createLlmOrchestrator(config);
+    
     this.sqliteStore =
       config.storage.mode === "sqlite" ? new SqliteStore(config.storage.sqlitePath) : null;
   }
 
   async init(): Promise<void> {
     await this.sqliteStore?.init();
+    this.llm = await createLlmOrchestrator(this.config);
   }
 
   private readonly queue: IncidentSignalV1[] = [];
