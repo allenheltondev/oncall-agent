@@ -78,7 +78,7 @@ export async function getGitHubAppInstallationToken(
     throw new Error(`GitHub App token request failed: ${response.status} ${body}`);
   }
 
-  const data = await response.json();
+  const data = (await response.json()) as { token: string; expires_at: string };
   return {
     token: data.token,
     expiresAt: data.expires_at,

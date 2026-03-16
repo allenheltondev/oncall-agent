@@ -9,7 +9,7 @@ describe("createRemediationProposal", () => {
     Bun.env.TELEPORT_CLUSTER = "main";
     Bun.env.TELEPORT_MOCK_IDENTITY = "true";
 
-    const config = loadConfig();
+    const config = await loadConfig();
     const context = assembleIncidentContext({
       incidentId: "INC-9000",
       service: "api",

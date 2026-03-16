@@ -36,3 +36,4 @@ data/ledger/
 
 # Finder (MacOS) folder config
 .DS_Store
+*.db

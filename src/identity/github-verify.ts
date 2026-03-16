@@ -37,7 +37,7 @@ async function verifyApp(config: AppConfig, repo: string): Promise<GitHubVerifyR
       const body = await res.text();
       return { ok: false, authMethod, repo, repoAccessible: false, error: `JWT rejected by GitHub /app (${res.status}): ${body}` };
     }
-    const data = await res.json();
+    const data = (await res.json()) as { name?: string; slug?: string };
     appName = data.name ?? data.slug;
   } catch (e: any) {
     return { ok: false, authMethod, repo, repoAccessible: false, error: `JWT generation failed: ${e.message}` };
@@ -84,7 +84,7 @@ async function verifyPat(token: string, repo: string): Promise<GitHubVerifyResul
       const body = await res.text();
       return { ok: false, authMethod, repo, repoAccessible: false, error: `PAT auth failed (${res.status}): ${body}` };
     }
-    const data = await res.json();
+    const data = (await res.json()) as { login?: string };
     user = data.login;
     scopes = res.headers.get("x-oauth-scopes") ?? undefined;
   } catch (e: any) {

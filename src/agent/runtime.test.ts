@@ -11,9 +11,9 @@ function prepareTestEnv(): void {
 }
 
 describe("AgentRuntime", () => {
-  test("deduplicates incident IDs", () => {
+  test("deduplicates incident IDs", async () => {
     prepareTestEnv();
-    const runtime = new AgentRuntime(loadConfig());
+    const runtime = new AgentRuntime(await loadConfig());
     const incident = {
       schemaVersion: "incident.v1" as const,
       incidentId: "inc-123",
@@ -31,7 +31,7 @@ describe("AgentRuntime", () => {
 
   test("processes queued incident to DONE", async () => {
     prepareTestEnv();
-    const runtime = new AgentRuntime(loadConfig());
+    const runtime = new AgentRuntime(await loadConfig());
     runtime.enqueue({
       schemaVersion: "incident.v1",
       incidentId: "inc-456",

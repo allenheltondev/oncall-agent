@@ -47,6 +47,8 @@ export async function ensureRepoWorkspace(
 
   // Clone the repo
   const cloneUrl = `https://github.com/${repoSlug}.git`;
+  const { rm } = await import("node:fs/promises");
+  await rm(repoPath, { recursive: true, force: true });
   await $`git clone ${cloneUrl} ${repoPath}`;
   await $`git -C ${repoPath} checkout ${config.github.baseBranch}`;
 

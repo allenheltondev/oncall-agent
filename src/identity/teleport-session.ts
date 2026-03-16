@@ -81,7 +81,7 @@ export async function loginTeleport(config: AppConfig): Promise<string> {
     throw new Error("Could not extract AWS profile name from tsh apps login output");
   }
 
-  return profileMatch[1];
+  return profileMatch[1]!;
 }
 
 export async function ensureTeleportSession(config: AppConfig): Promise<string | undefined> {

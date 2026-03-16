@@ -18,6 +18,6 @@ describe("ensureRepoWorkspace", () => {
 
     expect(workspace.owner).toBe("allenheltondev");
     expect(workspace.repo).toBe("oncall-agent");
-    expect(workspace.repoPath).toContain("allenheltondev/oncall-agent");
+    expect(workspace.repoPath).toContain("allenheltondev" + require("path").sep + "oncall-agent");
   });
 });
