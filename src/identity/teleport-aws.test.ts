@@ -12,7 +12,7 @@ describe("requestAwsRuntimeAccess", () => {
     delete Bun.env.TELEPORT_CLUSTER;
     Bun.env.TELEPORT_MOCK_IDENTITY = "false";
 
-    const config = loadConfig();
+    const config = await loadConfig();
     await expect(
       requestAwsRuntimeAccess(config, {
         scope: "cloudwatch:read",
@@ -37,7 +37,7 @@ describe("requestAwsRuntimeAccess", () => {
     Bun.env.TELEPORT_CLUSTER = "main";
     Bun.env.TELEPORT_MOCK_IDENTITY = "true";
 
-    const config = loadConfig();
+    const config = await loadConfig();
     const grant = await requestAwsRuntimeAccess(config, {
       scope: "cloudwatch:read",
       reason: "incident triage",

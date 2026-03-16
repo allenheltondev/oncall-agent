@@ -1,5 +1,5 @@
 import { startAgent } from "./agent/runtime";
 import { loadConfig } from "./config/env";
 
-const config = loadConfig();
+const config = await loadConfig();
 await startAgent(config);

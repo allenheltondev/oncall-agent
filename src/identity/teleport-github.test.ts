@@ -12,7 +12,7 @@ describe("requestGithubRuntimeAccess", () => {
     delete Bun.env.TELEPORT_CLUSTER;
     Bun.env.TELEPORT_MOCK_IDENTITY = "false";
 
-    const config = loadConfig();
+    const config = await loadConfig();
     await expect(
       requestGithubRuntimeAccess(config, { scope: "repo:read", reason: "incident remediation" }),
     ).rejects.toThrow("Teleport proxy/cluster");
@@ -27,7 +27,7 @@ describe("requestGithubRuntimeAccess", () => {
     Bun.env.TELEPORT_CLUSTER = "main";
     Bun.env.TELEPORT_MOCK_IDENTITY = "true";
 
-    const config = loadConfig();
+    const config = await loadConfig();
     const grant = await requestGithubRuntimeAccess(config, {
       scope: "pr:create",
       reason: "create remediation PR",

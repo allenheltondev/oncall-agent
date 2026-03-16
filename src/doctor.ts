@@ -7,7 +7,7 @@ export interface DoctorCheck {
 }
 
 export async function runDoctor(): Promise<{ ok: boolean; checks: DoctorCheck[] }> {
-  const config = loadConfig();
+  const config = await loadConfig();
   const checks: DoctorCheck[] = [];
 
   checks.push({

@@ -8,7 +8,7 @@ describe("collectInvestigationEvidence", () => {
     Bun.env.TELEPORT_CLUSTER = "main";
     Bun.env.TELEPORT_MOCK_IDENTITY = "true";
 
-    const config = loadConfig();
+    const config = await loadConfig();
     const evidence = await collectInvestigationEvidence(config, {
       incidentId: "inc-123",
       service: "api",

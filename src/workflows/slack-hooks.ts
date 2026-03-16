@@ -42,7 +42,7 @@ function formatSlackText(payload: SlackHookPayload): string {
 }
 
 export async function sendSlackHook(payload: SlackHookPayload): Promise<void> {
-  const config = loadConfig();
+  const config = await loadConfig();
   const webhookUrl = Bun.env.SLACK_WEBHOOK_URL;
 
   if (!webhookUrl) {

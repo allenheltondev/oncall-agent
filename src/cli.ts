@@ -4,7 +4,8 @@ import { startAgent } from "./agent/runtime";
 import { readFile, writeFile } from "node:fs/promises";
 import { runSetupWizard } from "./setup/wizard";
 import { runDoctor } from "./doctor";
-import { maskSecret } from "./security/secrets";
+import { checkTeleportSession, loginTeleport } from "./identity/teleport-session";import { maskSecret } from "./security/secrets";
+import { verifyGitHub } from "./identity/github-verify";
 
 interface CliOptions {
   configPath?: string;
@@ -20,11 +21,15 @@ interface CliOptions {
   teleportProxy?: string;
   teleportCluster?: string;
   teleportAudience?: string;
-  teleportMockIdentity?: string;
+  teleportAwsRole?: string;
+  teleportAwsAppName?: string;  teleportMockIdentity?: string;
   githubOwner?: string;
   githubRepo?: string;
   githubBaseBranch?: string;
-  slackToken?: string;
+  githubToken?: string;
+  githubAppId?: string;
+  githubAppInstallationId?: string;
+  githubAppPrivateKey?: string;  slackToken?: string;
   slackChannel?: string;
   openaiApiKey?: string;
   openaiModel?: string;
@@ -59,9 +64,13 @@ function parseOptions(argv: string[]): CliOptions {
     else if (token === "--momento-topic") options.momentoTopicName = value;
     else if (token === "--teleport-proxy") options.teleportProxy = value;
     else if (token === "--teleport-cluster") options.teleportCluster = value;
-    else if (token === "--teleport-audience") options.teleportAudience = value;
+    else if (token === "--teleport-aws-role") options.teleportAwsRole = value;
+    else if (token === "--teleport-aws-app-name") options.teleportAwsAppName = value;    else if (token === "--teleport-audience") options.teleportAudience = value;
     else if (token === "--teleport-mock") options.teleportMockIdentity = value;
-    else if (token === "--github-owner") options.githubOwner = value;
+    else if (token === "--github-token") options.githubToken = value;
+    else if (token === "--github-app-id") options.githubAppId = value;
+    else if (token === "--github-app-installation-id") options.githubAppInstallationId = value;
+    else if (token === "--github-app-private-key") options.githubAppPrivateKey = value;    else if (token === "--github-owner") options.githubOwner = value;
     else if (token === "--github-repo") options.githubRepo = value;
     else if (token === "--github-base-branch") options.githubBaseBranch = value;
     else if (token === "--slack-token") options.slackToken = value;
@@ -86,6 +95,9 @@ function usage(): string {
     "  oncall-agent config validate [--config <path>]",
     "  oncall-agent config llm show [--env-file <path>]",
     "  oncall-agent config llm set [--api-key <key>] [--model <model>] [--base-url <url>] [--env-file <path>]",
+    "  oncall-agent teleport status",
+    "  oncall-agent teleport login",
+    "  oncall-agent github verify",
     "  oncall-agent setup [--modules momento,teleport,...] [--non-interactive ...flags]",
     "  oncall-agent doctor",
     "  oncall-agent start [--config <path>]",
@@ -220,7 +232,11 @@ export async function runCli(argv = Bun.argv.slice(2)): Promise<number> {
       momentoCacheName: opts.momentoCacheName,
       momentoTopicName: opts.momentoTopicName,
       teleportProxy: opts.teleportProxy,
-      teleportCluster: opts.teleportCluster,
+      teleportAwsRole: opts.teleportAwsRole,
+      githubToken: opts.githubToken,
+      githubAppId: opts.githubAppId,
+      githubAppInstallationId: opts.githubAppInstallationId,
+      githubAppPrivateKey: opts.githubAppPrivateKey,      teleportAwsAppName: opts.teleportAwsAppName,      teleportCluster: opts.teleportCluster,
       teleportAudience: opts.teleportAudience,
       teleportMockIdentity: opts.teleportMockIdentity,
       githubOwner: opts.githubOwner,
@@ -242,10 +258,48 @@ export async function runCli(argv = Bun.argv.slice(2)): Promise<number> {
     return result.ok ? 0 : 1;
   }
 
+  if (command === "teleport") {
+    const config = await loadConfig();
+
+    if (subcommand === "status") {
+      const status = await checkTeleportSession(config);
+      console.log(JSON.stringify({
+        valid: status.valid,
+        expiresAt: status.expiresAt ?? null,
+        username: status.username ?? null,
+        awsProfile: status.awsProfile ?? null,
+        proxy: config.teleport.proxy,
+        cluster: config.teleport.cluster,
+      }, null, 2));
+      return status.valid ? 0 : 1;
+    }
+
+    if (subcommand === "login") {
+      const profile = await loginTeleport(config);
+      console.log(JSON.stringify({ ok: true, awsProfile: profile }, null, 2));
+      return 0;
+    }
+
+    console.error(`Unknown teleport subcommand: ${subcommand}`);
+    return 1;
+  }
+
+  if (command === "github") {
+    if (subcommand === "verify") {
+      const config = await loadConfig();
+      const result = await verifyGitHub(config);
+      console.log(JSON.stringify(result, null, 2));
+      return result.ok ? 0 : 1;
+    }
+
+    console.error(`Unknown github subcommand: ${subcommand}`);
+    return 1;
+  }
+
   if (command === "start") {
     const opts = parseOptions([subcommand, ...rest].filter(Boolean) as string[]);
     await loadIdentityMap(opts.configPath);
-    const config = loadConfig();
+    const config = await loadConfig();
     await startAgent(config);
     return 0;
   }
