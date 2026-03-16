@@ -1,5 +1,7 @@
 import type { AppConfig } from "../config/env";
 
+const TSH = Bun.env.TSH_PATH ?? "tsh";
+
 export interface TeleportSessionStatus {
   valid: boolean;
   expiresAt?: string;
@@ -9,7 +11,7 @@ export interface TeleportSessionStatus {
 
 export async function checkTeleportSession(config: AppConfig): Promise<TeleportSessionStatus> {
   try {
-    const proc = Bun.spawn(["tsh", "status", "--format=json"], {
+    const proc = Bun.spawn([TSH, "status", "--format=json"], {
       stdout: "pipe",
       stderr: "pipe",
     });
@@ -55,7 +57,7 @@ export async function loginTeleport(config: AppConfig): Promise<string> {
   }
 
   const proc = Bun.spawn([
-    "tsh",
+    TSH,
     "apps",
     "login",
     "--aws-role", config.teleport.awsRole,

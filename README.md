@@ -112,6 +112,10 @@ bun run cli -- start --config config/identity-map.v1.json
 
 ---
 
+## Chat Functionality
+
+The oncall-agent includes a chat interface for interactive incident response. Users can engage in a conversational manner to query the agent about incidents, request status updates, and even trigger remediation actions.
+
 ## Key runtime behavior
 
 - If `MOMENTO_API_KEY` is set, agent starts **live Momento subscription mode**

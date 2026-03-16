@@ -26,10 +26,11 @@ export interface AppConfig {
     token?: string;
   };
   llm: {
-    provider: "codex";
+    provider: "codex" | "bedrock";
     apiKey?: string;
     model: string;
     baseUrl?: string;
+    bedrockRegion?: string;
   };
   storage: {
     mode: "json" | "sqlite";
@@ -97,10 +98,11 @@ export async function loadConfig(): Promise<AppConfig> {
       token: env("GITHUB_TOKEN"),
     },
     llm: {
-      provider: "codex",
+      provider: (env("LLM_PROVIDER", "codex") as "codex" | "bedrock"),
       apiKey: env("OPENAI_API_KEY"),
-      model: env("OPENAI_MODEL", "gpt-5.3-codex")!,
+      model: env("LLM_MODEL") ?? env("OPENAI_MODEL", "gpt-5.3-codex")!,
       baseUrl: env("OPENAI_BASE_URL"),
+      bedrockRegion: env("BEDROCK_REGION", env("AWS_REGION", "us-east-1")),
     },
     storage: {
       mode: (env("STORAGE_MODE", "json") as "json" | "sqlite") ?? "json",

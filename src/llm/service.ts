@@ -1,18 +1,32 @@
 import type { AppConfig } from "../config/env";
+import type { LlmClient } from "./types";
 import { LlmOrchestrator } from "./orchestrator";
 import { renderPrompt } from "./prompt-templates";
 import { CodexClient } from "./providers/codex-client";
+import { BedrockClient } from "./providers/bedrock-client";
+import { ensureTeleportSession } from "../identity/teleport-session";
 
-export function createLlmOrchestrator(config: AppConfig): LlmOrchestrator | null {
-  if (!config.llm.apiKey) {
-    return null;
+async function createClient(config: AppConfig): Promise<LlmClient | null> {
+  if (config.llm.provider === "bedrock") {
+    const awsProfile = await ensureTeleportSession(config);
+    return new BedrockClient({
+      region: config.llm.bedrockRegion ?? config.awsRegion,
+      modelId: config.llm.model,
+      awsProfile: awsProfile ?? undefined,
+    });
   }
 
-  const client = new CodexClient({
+  if (!config.llm.apiKey) return null;
+  return new CodexClient({
     apiKey: config.llm.apiKey,
     model: config.llm.model,
     baseUrl: config.llm.baseUrl,
   });
+}
+
+export async function createLlmOrchestrator(config: AppConfig): Promise<LlmOrchestrator | null> {
+  const client = await createClient(config);
+  if (!client) return null;
 
   return new LlmOrchestrator({
     client,
