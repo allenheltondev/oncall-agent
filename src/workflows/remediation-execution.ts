@@ -2,7 +2,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { $ } from "bun";
 import type { RemediationProposal } from "./remediation";
-
+import { ensureRepoWorkspace } from "./repo-workspace";
+import { getGitHubAppInstallationToken, configureGitWithAppToken } from "../identity/github-app";
+import type { AppConfig } from "../config/env";
 export interface RemediationExecutionResult {
   branchName: string;
   commitSha: string;
@@ -11,7 +13,8 @@ export interface RemediationExecutionResult {
 
 export interface RemediationExecutionOptions {
   repoPath?: string;
-  openPullRequest?: boolean;
+  config?: AppConfig;
+  useWorkspace?: boolean;  openPullRequest?: boolean;
   expectedRepo?: string; // owner/repo
   baseBranch?: string;
   allowDirtyWorktree?: boolean;
@@ -47,7 +50,28 @@ export async function executeRemediationProposal(
   proposal: RemediationProposal,
   opts: RemediationExecutionOptions = {},
 ): Promise<RemediationExecutionResult> {
-  const repoPath = opts.repoPath ?? process.cwd();
+  let repoPath = opts.repoPath ?? process.cwd();
+
+  // If useWorkspace is enabled and config provided, clone/update repo
+  if (opts.useWorkspace && opts.config) {
+    const workspace = await ensureRepoWorkspace(opts.config);
+    repoPath = workspace.repoPath;
+
+    // Configure authentication: GitHub App or PAT
+    if (opts.config.github.appId && opts.config.github.appPrivateKey && opts.config.github.appInstallationId) {
+      // Use GitHub App
+      const appToken = await getGitHubAppInstallationToken({
+        appId: opts.config.github.appId,
+        privateKey: opts.config.github.appPrivateKey,
+        installationId: opts.config.github.appInstallationId,
+      });
+      await configureGitWithAppToken(repoPath, appToken.token, opts.config.github.owner, opts.config.github.repo);
+    } else if (opts.config.github.token) {
+      // Use Personal Access Token
+      await configureGitWithAppToken(repoPath, opts.config.github.token, opts.config.github.owner, opts.config.github.repo);
+    }
+  }
+
   const expectedRepo = opts.expectedRepo;
   const baseBranch = opts.baseBranch ?? "main";
 

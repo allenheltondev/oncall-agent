@@ -24,11 +24,15 @@ export interface SetupOptions {
   teleportProxy?: string;
   teleportCluster?: string;
   teleportAudience?: string;
-  teleportMockIdentity?: string;
+  teleportAwsRole?: string;
+  teleportAwsAppName?: string;  teleportMockIdentity?: string;
   githubOwner?: string;
   githubRepo?: string;
   githubBaseBranch?: string;
-  slackToken?: string;
+  githubToken?: string;
+  githubAppId?: string;
+  githubAppInstallationId?: string;
+  githubAppPrivateKey?: string;  slackToken?: string;
   slackChannel?: string;
   openaiApiKey?: string;
   openaiModel?: string;
@@ -118,6 +122,8 @@ export async function runSetupWizard(opts: SetupOptions): Promise<void> {
     let teleportCluster = current.TELEPORT_CLUSTER ?? "main";
     let teleportAudience = current.TELEPORT_AUDIENCE ?? "oncall-agent";
     let teleportMockIdentity = current.TELEPORT_MOCK_IDENTITY ?? "true";
+    let teleportAwsRole = current.TELEPORT_AWS_ROLE ?? "TeleportReadOnlyAccess";
+    let teleportAwsAppName = current.TELEPORT_AWS_APP_NAME ?? "ReadOnly-aws-ra-integration";
     if (selected.has("teleport") || selected.has("identity")) {
       teleportProxy = await promptIfNeeded(rl, "Teleport proxy", opts.teleportProxy, teleportProxy);
       teleportCluster = await promptIfNeeded(rl, "Teleport cluster", opts.teleportCluster, teleportCluster);
@@ -128,15 +134,39 @@ export async function runSetupWizard(opts: SetupOptions): Promise<void> {
         opts.teleportMockIdentity,
         teleportMockIdentity,
       );
+      teleportAwsRole = await promptIfNeeded(rl, "Teleport AWS role", opts.teleportAwsRole, teleportAwsRole);
+      teleportAwsAppName = await promptIfNeeded(rl, "Teleport AWS app name", opts.teleportAwsAppName, teleportAwsAppName);
     }
 
     let githubOwner = current.GITHUB_OWNER ?? "allenheltondev";
     let githubRepo = current.GITHUB_REPO ?? "oncall-agent";
     let githubBaseBranch = "main";
+    let githubToken = current.GITHUB_TOKEN ?? "";
+    let githubAppId = current.GITHUB_APP_ID ?? "";
+    let githubAppInstallationId = current.GITHUB_APP_INSTALLATION_ID ?? "";
+    let githubAppPrivateKey = current.GITHUB_APP_PRIVATE_KEY ?? "";
+    
     if (selected.has("github") || selected.has("identity")) {
       githubOwner = await promptIfNeeded(rl, "GitHub owner", opts.githubOwner, githubOwner);
       githubRepo = await promptIfNeeded(rl, "GitHub repo", opts.githubRepo, githubRepo);
       githubBaseBranch = await promptIfNeeded(rl, "GitHub base branch", opts.githubBaseBranch, githubBaseBranch);
+      
+      // Ask which auth method to use
+      let authMethod = "pat";
+      if (rl && !opts.nonInteractive) {
+        const answer = await rl.question(
+          "GitHub authentication method (pat/app) [pat]: "
+        );
+        authMethod = answer.trim().toLowerCase() || "pat";
+      }
+      
+      if (authMethod === "app") {
+        githubAppId = await promptIfNeeded(rl, "GitHub App ID", opts.githubAppId, githubAppId);
+        githubAppInstallationId = await promptIfNeeded(rl, "GitHub App Installation ID", opts.githubAppInstallationId, githubAppInstallationId);
+        githubAppPrivateKey = await promptIfNeeded(rl, "GitHub App Private Key (paste full PEM)", opts.githubAppPrivateKey, githubAppPrivateKey);
+      } else {
+        githubToken = await promptIfNeeded(rl, "GitHub Personal Access Token", opts.githubToken, githubToken);
+      }
     }
 
     let slackToken = current.SLACK_TOKEN ?? "";
@@ -170,11 +200,20 @@ export async function runSetupWizard(opts: SetupOptions): Promise<void> {
       envOut.TELEPORT_CLUSTER = teleportCluster;
       envOut.TELEPORT_AUDIENCE = teleportAudience;
       envOut.TELEPORT_MOCK_IDENTITY = teleportMockIdentity;
-    }
+      envOut.TELEPORT_AWS_ROLE = teleportAwsRole;
+      envOut.TELEPORT_AWS_APP_NAME = teleportAwsAppName;    }
     if (selected.has("github") || selected.has("identity")) {
       envOut.GITHUB_OWNER = githubOwner;
       envOut.GITHUB_REPO = githubRepo;
-    }
+      envOut.GITHUB_BASE_BRANCH = githubBaseBranch;
+      if (githubToken) {
+        envOut.GITHUB_TOKEN = githubToken;
+      }
+      if (githubAppId) {
+        envOut.GITHUB_APP_ID = githubAppId;
+        envOut.GITHUB_APP_INSTALLATION_ID = githubAppInstallationId;
+        envOut.GITHUB_APP_PRIVATE_KEY = githubAppPrivateKey;
+      }    }
     if (selected.has("slack")) {
       envOut.SLACK_TOKEN = slackToken;
       envOut.SLACK_CHANNEL = slackChannel;

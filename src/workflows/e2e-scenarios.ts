@@ -15,7 +15,7 @@ export interface E2EScenarioResult {
 }
 
 export async function runE2EScenarioFromPayload(payload: unknown): Promise<E2EScenarioResult> {
-  const config = loadConfig();
+  const config = await loadConfig();
   const incident = parseIncidentSignal(payload);
 
   const evidence = await collectInvestigationEvidence(config, {

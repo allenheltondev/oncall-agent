@@ -14,11 +14,16 @@ export interface AppConfig {
     mockIdentity: boolean;
     issuerCommandAws?: string;
     issuerCommandGithub?: string;
-  };
+    awsRole?: string;
+    awsAppName?: string;  };
   github: {
     owner: string;
     repo: string;
     baseBranch: string;
+    appId?: string;
+    appPrivateKey?: string;
+    appInstallationId?: string;
+    token?: string;
   };
   llm: {
     provider: "codex";
@@ -46,7 +51,13 @@ function envBool(name: string, fallback = false): boolean {
   return ["1", "true", "yes", "on"].includes(value.toLowerCase());
 }
 
-export function loadConfig(): AppConfig {
+async function readKeyFile(path?: string): Promise<string | undefined> {
+  if (!path) return undefined;
+  const { readFile } = await import("node:fs/promises");
+  return (await readFile(path, "utf-8")).trim();
+}
+
+export async function loadConfig(): Promise<AppConfig> {
   const nodeEnvRaw = env("NODE_ENV", "development")!;
   const logLevelRaw = env("LOG_LEVEL", "info")!;
 
@@ -73,12 +84,17 @@ export function loadConfig(): AppConfig {
       audience: env("TELEPORT_AUDIENCE", "oncall-agent")!,
       mockIdentity: envBool("TELEPORT_MOCK_IDENTITY", false),
       issuerCommandAws: env("TELEPORT_ISSUER_COMMAND_AWS"),
-      issuerCommandGithub: env("TELEPORT_ISSUER_COMMAND_GITHUB"),
+      awsRole: env("TELEPORT_AWS_ROLE"),
+      awsAppName: env("TELEPORT_AWS_APP_NAME"),      issuerCommandGithub: env("TELEPORT_ISSUER_COMMAND_GITHUB"),
     },
     github: {
       owner: env("GITHUB_OWNER", "allenheltondev")!,
       repo: env("GITHUB_REPO", "oncall-agent")!,
       baseBranch: env("GITHUB_BASE_BRANCH", "main")!,
+      appId: env("GITHUB_APP_ID"),
+      appPrivateKey: env("GITHUB_APP_PRIVATE_KEY") ?? await readKeyFile(env("GITHUB_APP_PRIVATE_KEY_FILE")),
+      appInstallationId: env("GITHUB_APP_INSTALLATION_ID"),
+      token: env("GITHUB_TOKEN"),
     },
     llm: {
       provider: "codex",

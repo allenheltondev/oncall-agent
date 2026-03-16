@@ -10,7 +10,7 @@ export async function publishFixture(
   fixturePath: string,
   options: PublishOptions = {},
 ): Promise<void> {
-  const config = loadConfig();
+  const config = await loadConfig();
   const raw = await readFile(fixturePath, "utf-8");
   const parsed = parseIncidentSignal(JSON.parse(raw));
 

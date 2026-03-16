@@ -1,5 +1,6 @@
 import type { AppConfig } from "../config/env";
 import { requestAwsRuntimeAccess } from "../identity/teleport-aws";
+import { executeAwsCli } from "../tools/aws-cli";
 import type {
   InvestigationAdapterError,
   InvestigationContext,

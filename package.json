@@ -17,7 +17,8 @@
     "publish:simulate": "bun run src/publisher/simulator.ts"
   },
   "dependencies": {
-    "@gomomento/sdk": "^1.95.0"
+    "@gomomento/sdk": "^1.95.0",
+    "jose": "^6.2.1"
   },
   "devDependencies": {
     "@types/bun": "latest",
