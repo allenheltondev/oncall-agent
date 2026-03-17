@@ -17,7 +17,8 @@ export async function startMomentoSubscriptionLoop(
   let subscription: { unsubscribe?: () => Promise<void> | void } | undefined;
 
   try {
-    const sdk = (await import("@gomomento/sdk")) as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sdk = (await import("@gomomento/sdk-web")) as any;
     const topicClient = new sdk.TopicClient({
       configuration: sdk.Configurations.Laptop.latest(),
       credentialProvider: sdk.CredentialProvider.fromString(config.momento.apiKey),

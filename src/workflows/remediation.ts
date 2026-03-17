@@ -1,8 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { IncidentContextV1 } from "./incident-context";
 import type { Hypothesis } from "./hypothesis-engine";
-import type { AppConfig } from "../config/env";
-import { requestGithubRuntimeAccess } from "../identity/teleport-github";
 
 export interface RemediationProposal {
   branchName: string;
@@ -13,15 +11,9 @@ export interface RemediationProposal {
 }
 
 export async function createRemediationProposal(
-  config: AppConfig,
   context: IncidentContextV1,
   hypotheses: Hypothesis[],
 ): Promise<RemediationProposal> {
-  await requestGithubRuntimeAccess(config, {
-    scope: "pr:create",
-    reason: `remediation:${context.incidentId}`,
-  });
-
   const top = hypotheses[0];
   const slug = context.incidentId.toLowerCase().replace(/[^a-z0-9-]/g, "-");
   const branchName = `agent/remediate/${slug}-${randomUUID().slice(0, 8)}`;

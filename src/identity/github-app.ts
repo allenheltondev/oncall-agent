@@ -1,4 +1,4 @@
-import { SignJWT, importPKCS8 } from "jose";
+import { SignJWT } from "jose";
 
 /**
  * GitHub App Authentication
@@ -36,8 +36,8 @@ export async function generateAppJWT(appId: string, privateKey: string): Promise
   let key;
   try {
     key = createPrivateKey(pem);
-  } catch (e: any) {
-    throw new Error(`Failed to parse private key (length=${pem.length}, starts="${pem.slice(0, 40)}"): ${e.message}`);
+  } catch (e: unknown) {
+    throw new Error(`Failed to parse private key (length=${pem.length}, starts="${pem.slice(0, 40)}"): ${(e as Error).message}`);
   }
 
   const jwt = await new SignJWT({})
@@ -98,7 +98,10 @@ export async function configureGitWithAppToken(
 ): Promise<void> {
   const { $ } = await import("bun");
 
-  // Configure git to use the token
   const authUrl = `https://x-access-token:${token}@github.com/${owner}/${repo}.git`;
   await $`git -C ${repoPath} remote set-url origin ${authUrl}`;
+
+  // Ensure commits are attributed to the oncall-agent bot
+  await $`git -C ${repoPath} config user.name ${"oncall-agent[bot]"}`;
+  await $`git -C ${repoPath} config user.email ${"oncall-agent[bot]@users.noreply.github.com"}`;
 }

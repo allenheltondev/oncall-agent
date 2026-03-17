@@ -4,14 +4,12 @@ import { collectInvestigationEvidence } from "./investigation-adapters";
 import { assembleIncidentContext, persistIncidentContext } from "./incident-context";
 import { generateHypotheses } from "./hypothesis-engine";
 import { createRemediationProposal } from "./remediation";
-import { appendGovernanceEntry } from "./governance-ledger";
 
 export interface E2EScenarioResult {
   incidentId: string;
   contextPath: string;
   topHypothesisId?: string;
   proposalBranch: string;
-  governanceLogged: boolean;
 }
 
 export async function runE2EScenarioFromPayload(payload: unknown): Promise<E2EScenarioResult> {
@@ -33,27 +31,12 @@ export async function runE2EScenarioFromPayload(payload: unknown): Promise<E2ESc
 
   const contextPath = await persistIncidentContext(context);
   const hypotheses = generateHypotheses(context);
-  const proposal = await createRemediationProposal(config, context, hypotheses);
-
-  await appendGovernanceEntry({
-    timestamp: new Date().toISOString(),
-    incidentId: incident.incidentId,
-    correlationId: incident.correlationId,
-    action: "e2e.scenario",
-    identityScope: "cloudwatch:read+pr:create",
-    authDecision: "allow",
-    outcome: "success",
-    details: {
-      topHypothesisId: hypotheses[0]?.id,
-      branchName: proposal.branchName,
-    },
-  });
+  const proposal = await createRemediationProposal(context, hypotheses);
 
   return {
     incidentId: incident.incidentId,
     contextPath,
     topHypothesisId: hypotheses[0]?.id,
     proposalBranch: proposal.branchName,
-    governanceLogged: true,
   };
 }

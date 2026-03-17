@@ -22,7 +22,7 @@ export async function fetchCloudWatchLogs(
 
   if (result.success) {
     const events = JSON.parse(result.stdout).events ?? [];
-    return events.map((e: any) => ({
+    return events.map((e: { timestamp: number; message: string }) => ({
       timestamp: new Date(e.timestamp).toISOString(),
       message: e.message,
     }));

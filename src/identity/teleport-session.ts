@@ -33,7 +33,7 @@ export async function checkTeleportSession(config: AppConfig): Promise<TeleportS
       // Try to extract AWS profile from active apps
       let awsProfile: string | undefined;
       if (status.active?.apps && Array.isArray(status.active.apps)) {
-        const awsApp = status.active.apps.find((app: any) => app.name === config.teleport.awsAppName);
+        const awsApp = status.active.apps.find((app: Record<string, unknown>) => app.name === config.teleport.awsAppName);
         awsProfile = awsApp?.aws_profile;
       }
 
@@ -77,10 +77,12 @@ export async function loginTeleport(config: AppConfig): Promise<string> {
     throw new Error(`Teleport apps login failed with exit code ${code}`);
   }
 
-  // Extract profile name from output (e.g., "Logged into AWS app ... Profile name: my-profile")
-  const profileMatch = stdout.match(/Profile name:\s*(\S+)/i);
+  // Extract profile name from output — try both old and new tsh formats
+  const profileMatch = stdout.match(/Profile name:\s*(\S+)/i)
+    ?? stdout.match(/--profile\s+(\S+)/);
   if (!profileMatch) {
-    throw new Error("Could not extract AWS profile name from tsh apps login output");
+    // Fall back to app name as profile (tsh convention)
+    return config.teleport.awsAppName;
   }
 
   return profileMatch[1]!;

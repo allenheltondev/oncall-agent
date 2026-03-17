@@ -30,9 +30,7 @@ bun run start
   - Check guardrail reasons in logs (`incident.remediation.skipped`).
 - **Missing artifacts**
   - Context: `data/context/*.context.v1.json`
-  - Ledger: `data/ledger/governance-ledger.jsonl`
 
 ## 5) Operational checks
 - Verify context artifact written per incident
-- Verify governance entry appended for privileged steps
 - Verify top hypothesis and remediation proposal events emitted

@@ -19,16 +19,6 @@ export class SqliteStore {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
-
-      CREATE TABLE IF NOT EXISTS governance_entries (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        incident_id TEXT NOT NULL,
-        action TEXT NOT NULL,
-        auth_decision TEXT NOT NULL,
-        outcome TEXT NOT NULL,
-        details_json TEXT,
-        created_at TEXT NOT NULL
-      );
     `);
   }
 
@@ -55,30 +45,6 @@ export class SqliteStore {
         input.correlationId ?? null,
         input.state,
         input.timestamp,
-        input.timestamp,
-      );
-  }
-
-  insertGovernanceEntry(input: {
-    incidentId: string;
-    action: string;
-    authDecision: string;
-    outcome: string;
-    detailsJson?: string;
-    timestamp: string;
-  }): void {
-    if (!this.db) throw new Error("SqliteStore not initialized");
-    this.db
-      .prepare(
-        `INSERT INTO governance_entries (incident_id, action, auth_decision, outcome, details_json, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        input.incidentId,
-        input.action,
-        input.authDecision,
-        input.outcome,
-        input.detailsJson ?? null,
         input.timestamp,
       );
   }

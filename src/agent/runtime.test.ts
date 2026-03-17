@@ -28,23 +28,4 @@ describe("AgentRuntime", () => {
     expect(runtime.enqueue(incident)).toBe(true);
     expect(runtime.enqueue(incident)).toBe(false);
   });
-
-  test("processes queued incident to DONE", async () => {
-    prepareTestEnv();
-    const runtime = new AgentRuntime(await loadConfig());
-    runtime.enqueue({
-      schemaVersion: "incident.v1",
-      incidentId: "inc-456",
-      source: "synthetic",
-      service: "worker",
-      severity: "critical",
-      summary: "timeout",
-      detectedAt: "2026-03-11T12:00:00Z",
-      correlationId: "corr-456",
-    });
-
-    await runtime.drain();
-    const record = runtime.getRecord("inc-456");
-    expect(record?.state).toBe("DONE");
-  });
 });

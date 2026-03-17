@@ -5,7 +5,8 @@ export type SlackHookEvent =
   | "problem_detected"
   | "working_hypothesis"
   | "resolution_path_proposed"
-  | "resolution_outcome";
+  | "resolution_outcome"
+  | "agent_update";
 
 export interface SlackHookPayload {
   event: SlackHookEvent;
