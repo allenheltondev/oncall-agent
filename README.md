@@ -1,6 +1,64 @@
 # oncall-agent
 
-Local persistent on-call incident response agent with runtime identity and scoped authority.
+A local persistent on-call incident response agent that automatically investigates, diagnoses, and remediates production incidents. It subscribes to incident signals via [Momento Topics](https://www.gomomento.com/), uses an LLM-driven agent loop (Amazon Bedrock) to investigate AWS resources, forms root-cause hypotheses, and can open remediation PRs on GitHub — all while authenticating through [Teleport](https://goteleport.com/) for zero-standing-privilege AWS access.
+
+## What it does
+
+The oncall-agent is a fully autonomous incident responder. When a production alert fires, it:
+
+- **Investigates** — queries CloudWatch logs and metrics, inspects Lambda/EC2/DynamoDB resources, and reads source code to understand what went wrong.
+- **Diagnoses** — correlates evidence (error spikes, recent deploys, timeout patterns) to form ranked root-cause hypotheses with confidence scores.
+- **Remediates** — optionally creates a fix branch, commits a patch, pushes, and opens a GitHub PR.
+- **Reports** — posts structured Slack updates at each stage: detection, investigation findings, hypothesis, and resolution outcome.
+
+There is no human in the loop during processing. The agent runs locally as a persistent process, subscribing to a Momento topic for real-time incident signals.
+
+## How it works
+
+The agent runtime processes each incident through a state machine with five states:
+
+| State | What happens |
+|-------|-------------|
+| **RECEIVED** | Signal is parsed, validated against the `incident.v1` schema, deduplicated by incident ID, and queued. |
+| **AUTH** | A Teleport session is established (or refreshed) to obtain short-lived, scoped AWS credentials. Slack is notified that an incident is being investigated. |
+| **INVESTIGATE** | An LLM agent loop runs on Amazon Bedrock. The model iteratively calls tools — `aws_cli`, `file_operation`, `git`, `github_api`, `send_slack_message` — to gather evidence, read source code, and build a diagnosis. Each AWS call goes through Teleport-issued credentials with a scoped reason (e.g. `investigation:<incidentId>`). |
+| **DONE** | The agent posts a final Slack summary with its hypothesis, confidence score, and (if enabled) a link to the remediation PR. |
+| **FAILED** | The error is recorded and surfaced. The incident can be retried. |
+
+Remediation execution (branch + PR) is off by default and must be explicitly enabled via `REMEDIATION_EXECUTE` and `REMEDIATION_OPEN_PR`.
+
+```mermaid
+flowchart TD
+    MO[Momento Topic] -- incident signal --> RT[Agent Runtime<br/>dedup + queue]
+    RT -- enqueue --> SM
+
+    subgraph SM[State Machine]
+        direction LR
+        S1[RECEIVED] --> S2[AUTH]
+        S2 --> S3[INVESTIGATE]
+        S3 --> S4[DONE]
+        S3 -.-> S5[FAILED]
+    end
+
+    S2 -- login / refresh --> TP[Teleport Proxy]
+    TP -- short-lived AWS creds<br/>scoped per investigation --> BR
+
+    subgraph BR[LLM Agent Loop — Amazon Bedrock]
+        direction TB
+        T1[aws_cli]
+        T2[file_operation]
+        T3[git]
+        T4[github_api]
+        T5[send_slack_message]
+        T6[complete]
+    end
+
+    T1 -- CloudWatch logs/metrics<br/>Lambda · EC2 · DynamoDB --> AWS[(AWS APIs)]
+    T3 -- branch · commit · push --> GH[GitHub]
+    T4 -- open PR · read repo --> GH
+    T5 -- status updates --> SL[Slack]
+    T6 -- summary + hypothesis --> SM
+```
 
 ## Stack
 - Runtime: **Bun**
@@ -121,6 +179,7 @@ The oncall-agent includes a chat interface for interactive incident response. Us
 - If `MOMENTO_API_KEY` is set, agent starts **live Momento subscription mode**
 - If not set, agent runs fallback startup self-check flow
 - Slack hooks deliver via `SLACK_WEBHOOK_URL` if configured, otherwise stdout fallback
+- Teleport provides short-lived AWS credentials per investigation — no standing access keys required
 - Remediation execution is **off by default**:
   - `REMEDIATION_EXECUTE=false`
   - `REMEDIATION_OPEN_PR=false`
