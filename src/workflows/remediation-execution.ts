@@ -51,6 +51,7 @@ export async function executeRemediationProposal(
   opts: RemediationExecutionOptions = {},
 ): Promise<RemediationExecutionResult> {
   let repoPath = opts.repoPath ?? process.cwd();
+  let githubToken: string | undefined;
 
   // If useWorkspace is enabled and config provided, clone/update repo
   if (opts.useWorkspace && opts.config) {
@@ -59,16 +60,16 @@ export async function executeRemediationProposal(
 
     // Configure authentication: GitHub App or PAT
     if (opts.config.github.appId && opts.config.github.appPrivateKey && opts.config.github.appInstallationId) {
-      // Use GitHub App
       const appToken = await getGitHubAppInstallationToken({
         appId: opts.config.github.appId,
         privateKey: opts.config.github.appPrivateKey,
         installationId: opts.config.github.appInstallationId,
       });
-      await configureGitWithAppToken(repoPath, appToken.token, opts.config.github.owner, opts.config.github.repo);
+      githubToken = appToken.token;
+      await configureGitWithAppToken(repoPath, githubToken, opts.config.github.owner, opts.config.github.repo);
     } else if (opts.config.github.token) {
-      // Use Personal Access Token
-      await configureGitWithAppToken(repoPath, opts.config.github.token, opts.config.github.owner, opts.config.github.repo);
+      githubToken = opts.config.github.token;
+      await configureGitWithAppToken(repoPath, githubToken, opts.config.github.owner, opts.config.github.repo);
     }
   }
 
@@ -83,7 +84,7 @@ export async function executeRemediationProposal(
 
   await $`git -C ${repoPath} checkout -B ${proposal.branchName}`;
 
-  const notePath = join(artifactsDir, `${proposal.branchName.replace(/[\/]/g, "-")}.md`);
+  const notePath = join(artifactsDir, `${proposal.branchName.replace(/[/]/g, "-")}.md`);
   await mkdir(dirname(notePath), { recursive: true });
   await writeFile(
     notePath,
@@ -102,15 +103,33 @@ export async function executeRemediationProposal(
     if (!expectedRepo) {
       throw new Error("expectedRepo is required when openPullRequest=true");
     }
-
-    try {
-      const out = await $`gh pr create --repo ${expectedRepo} --base ${baseBranch} --head ${proposal.branchName} --title ${proposal.prTitle} --body ${proposal.prBody}`.text();
-      prUrl = out.trim().split(/\s+/).find((v) => v.startsWith("http"));
-    } catch (error) {
-      throw new Error(
-        `Remediation branch pushed but PR creation failed: ${error instanceof Error ? error.message : "unknown"}`,
-      );
+    if (!githubToken) {
+      throw new Error("GitHub token is required when openPullRequest=true");
     }
+
+    const [owner, repo] = expectedRepo.split("/");
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${githubToken}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      body: JSON.stringify({
+        title: proposal.prTitle,
+        body: proposal.prBody,
+        head: proposal.branchName,
+        base: baseBranch,
+      }),
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Remediation branch pushed but PR creation failed: ${response.status} ${body}`);
+    }
+
+    const data = (await response.json()) as { html_url: string };
+    prUrl = data.html_url;
   }
 
   return { branchName: proposal.branchName, commitSha, prUrl };

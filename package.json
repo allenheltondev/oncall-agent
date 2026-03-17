@@ -13,17 +13,21 @@
     "start": "bun run src/main.ts",
     "cli": "bun run src/cli.ts",
     "typecheck": "bun x tsc --noEmit",
+    "lint": "eslint src/",
     "test": "bun test",
     "publish:simulate": "bun run src/publisher/simulator.ts"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1009.0",
     "@aws-sdk/credential-providers": "^3.1009.0",
-    "@gomomento/sdk": "^1.95.0",
+    "@gomomento/sdk-web": "^1.95.0",
     "jose": "^6.2.1"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "eslint": "^9.22.0",
+    "@eslint/js": "^9.22.0",
+    "typescript-eslint": "^8.28.0",
     "typescript": "^5.9.2"
   }
 }

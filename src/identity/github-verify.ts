@@ -39,8 +39,8 @@ async function verifyApp(config: AppConfig, repo: string): Promise<GitHubVerifyR
     }
     const data = (await res.json()) as { name?: string; slug?: string };
     appName = data.name ?? data.slug;
-  } catch (e: any) {
-    return { ok: false, authMethod, repo, repoAccessible: false, error: `JWT generation failed: ${e.message}` };
+  } catch (e: unknown) {
+    return { ok: false, authMethod, repo, repoAccessible: false, error: `JWT generation failed: ${(e as Error).message}` };
   }
 
   // Step 2: Exchange for installation token
@@ -52,8 +52,8 @@ async function verifyApp(config: AppConfig, repo: string): Promise<GitHubVerifyR
       installationId: config.github.appInstallationId!,
     });
     token = appToken.token;
-  } catch (e: any) {
-    return { ok: false, authMethod, repo, repoAccessible: false, user: appName, error: `Installation token failed (installationId=${config.github.appInstallationId}): ${e.message}` };
+  } catch (e: unknown) {
+    return { ok: false, authMethod, repo, repoAccessible: false, user: appName, error: `Installation token failed (installationId=${config.github.appInstallationId}): ${(e as Error).message}` };
   }
 
   // Step 3: Check repo access with installation token
@@ -63,7 +63,7 @@ async function verifyApp(config: AppConfig, repo: string): Promise<GitHubVerifyR
       headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" },
     });
     repoAccessible = res.ok;
-  } catch {}
+  } catch { /* ignored */ }
 
   return { ok: repoAccessible, authMethod, repo, repoAccessible, user: appName };
 }
@@ -87,15 +87,15 @@ async function verifyPat(token: string, repo: string): Promise<GitHubVerifyResul
     const data = (await res.json()) as { login?: string };
     user = data.login;
     scopes = res.headers.get("x-oauth-scopes") ?? undefined;
-  } catch (e: any) {
-    return { ok: false, authMethod, repo, repoAccessible: false, error: `PAT request failed: ${e.message}` };
+  } catch (e: unknown) {
+    return { ok: false, authMethod, repo, repoAccessible: false, error: `PAT request failed: ${(e as Error).message}` };
   }
 
   let repoAccessible = false;
   try {
     const res = await fetch(`https://api.github.com/repos/${repo}`, { headers });
     repoAccessible = res.ok;
-  } catch {}
+  } catch { /* ignored */ }
 
   return { ok: repoAccessible, authMethod, repo, repoAccessible, user, scopes };
 }

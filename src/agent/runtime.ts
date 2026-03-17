@@ -6,38 +6,23 @@ import {
   type AgentState,
   type IncidentProcessingRecord,
 } from "./state-machine";
-import { requestAwsRuntimeAccess } from "../identity/teleport-aws";
-import { collectInvestigationEvidence } from "../workflows/investigation-adapters";
-import {
-  assembleIncidentContext,
-  persistIncidentContext,
-} from "../workflows/incident-context";
-import { generateHypotheses } from "../workflows/hypothesis-engine";
-import { createRemediationProposal } from "../workflows/remediation";
-import { executeRemediationProposal } from "../workflows/remediation-execution";
-import { appendGovernanceEntry } from "../workflows/governance-ledger";
-import { evaluateRemediationGuardrails } from "../workflows/safety-guardrails";
-import { buildHypothesisHook, sendSlackHook } from "../workflows/slack-hooks";
-import { createLlmOrchestrator, maybeGenerateStatusSummary } from "../llm/service";
-import { LlmOrchestrator } from "../llm/orchestrator";
+import { sendSlackHook } from "../workflows/slack-hooks";
+import { runAgentLoop } from "../workflows/agent-loop";
 import { startMomentoSubscriptionLoop } from "./momento-subscription";
 import { SqliteStore } from "../storage/sqlite";
 
 const TERMINAL_STATES: ReadonlySet<AgentState> = new Set(["DONE", "FAILED"]);
 
 export class AgentRuntime {
-  private llm: LlmOrchestrator | null = null;
   private readonly sqliteStore: SqliteStore | null;
 
   constructor(private readonly config: AppConfig) {
-    
     this.sqliteStore =
       config.storage.mode === "sqlite" ? new SqliteStore(config.storage.sqlitePath) : null;
   }
 
   async init(): Promise<void> {
     await this.sqliteStore?.init();
-    this.llm = await createLlmOrchestrator(this.config);
   }
 
   private readonly queue: IncidentSignalV1[] = [];
@@ -85,199 +70,30 @@ export class AgentRuntime {
         message: `Incident detected for ${record.incident.service}`,
       });
 
-      await requestAwsRuntimeAccess(this.config, {
-        scope: "cloudwatch:read",
-        reason: `incident:${record.incident.incidentId}`,
-      });
-      await appendGovernanceEntry({
-        timestamp: new Date().toISOString(),
-        incidentId,
-        correlationId: record.incident.correlationId,
-        action: "identity.request.aws",
-        identityScope: "cloudwatch:read",
-        authDecision: "allow",
-        outcome: "success",
-      });
-
       this.update(incidentId, "INVESTIGATE");
-      const evidence = await collectInvestigationEvidence(this.config, {
-        incidentId: record.incident.incidentId,
-        service: record.incident.service,
-        correlationId: record.incident.correlationId,
-      });
+      const result = await runAgentLoop(this.config, record.incident);
 
-      const context = assembleIncidentContext({
-        incidentId: record.incident.incidentId,
-        service: record.incident.service,
-        correlationId: record.incident.correlationId,
-        evidence,
-      });
-      const contextPath = await persistIncidentContext(context);
-      const hypotheses = generateHypotheses(context);
-
-      console.log(
-        JSON.stringify({
-          event: "incident.investigation.evidence",
-          incidentId,
-          correlationId: record.incident.correlationId,
-          hasLogs: Boolean(evidence.logs),
-          hasMetrics: Boolean(evidence.metrics),
-          hasDeploy: Boolean(evidence.deploy),
-          errorCount: evidence.errors.length,
-          contextPath,
-        }),
-      );
-
-      console.log(
-        JSON.stringify({
-          event: "incident.hypotheses.generated",
-          incidentId,
-          correlationId: record.incident.correlationId,
-          count: hypotheses.length,
-          top: hypotheses[0],
-        }),
-      );
-      await sendSlackHook(
-        buildHypothesisHook({
-          incidentId,
-          correlationId: record.incident.correlationId,
-          topHypothesis: hypotheses[0],
-        }),
-      );
-
-      this.update(incidentId, "REPORT");
-
-      const llmSummary = await maybeGenerateStatusSummary(this.llm, {
-        incidentId,
-        service: record.incident.service,
-        correlationId: record.incident.correlationId,
-        topHypothesis: hypotheses[0],
-      });
-      if (llmSummary) {
-        console.log(
-          JSON.stringify({
-            event: "incident.status_summary.generated",
-            incidentId,
-            correlationId: record.incident.correlationId,
-            summary: llmSummary,
-          }),
-        );
-      }
-
-      const preview = hypotheses[0]
-        ? `Apply guarded fallback + timeout handling for suspected cause: ${hypotheses[0].id}`
-        : "Apply observability-focused defensive patch";
-      const guardrails = evaluateRemediationGuardrails(context, hypotheses, preview);
-
-      if (!guardrails.allowed) {
-        await appendGovernanceEntry({
-          timestamp: new Date().toISOString(),
-          incidentId,
-          correlationId: record.incident.correlationId,
-          action: "remediation.proposal",
-          identityScope: "pr:create",
-          authDecision: "deny",
-          outcome: "failure",
-          details: { reasons: guardrails.reasons },
-        });
-
-        console.log(
-          JSON.stringify({
-            event: "incident.remediation.skipped",
-            incidentId,
-            correlationId: record.incident.correlationId,
-            reasons: guardrails.reasons,
-          }),
-        );
-        await sendSlackHook({
-          event: "resolution_outcome",
-          incidentId,
-          correlationId: record.incident.correlationId,
-          message: "Remediation skipped by guardrails",
-          details: { reasons: guardrails.reasons, outcome: "skipped" },
-        });
-        this.update(incidentId, "DONE");
-        return;
-      }
-
-      const proposal = await createRemediationProposal(this.config, context, hypotheses);
-      await appendGovernanceEntry({
-        timestamp: new Date().toISOString(),
+      console.log(JSON.stringify({
+        event: "incident.agent_loop.complete",
         incidentId,
         correlationId: record.incident.correlationId,
-        action: "remediation.proposal",
-        identityScope: "pr:create",
-        authDecision: "allow",
-        outcome: "success",
-        details: {
-          branchName: proposal.branchName,
-          prTitle: proposal.prTitle,
-        },
-      });
-      console.log(
-        JSON.stringify({
-          event: "incident.remediation.proposal",
-          incidentId,
-          correlationId: record.incident.correlationId,
-          branchName: proposal.branchName,
-          prTitle: proposal.prTitle,
-          patchSummary: proposal.patchSummary,
-        }),
-      );
+        summary: result.summary,
+        hypothesis: result.hypothesis,
+        remediation: result.remediation,
+        prUrl: result.prUrl,
+      }));
+
       await sendSlackHook({
-        event: "resolution_path_proposed",
+        event: "resolution_outcome",
         incidentId,
         correlationId: record.incident.correlationId,
-        message: "Remediation path proposed",
+        message: result.summary,
         details: {
-          branchName: proposal.branchName,
-          prTitle: proposal.prTitle,
-          patchSummary: proposal.patchSummary,
+          hypothesis: result.hypothesis,
+          remediation: result.remediation,
+          prUrl: result.prUrl,
         },
       });
-      const shouldExecute = (Bun.env.REMEDIATION_EXECUTE ?? "false").toLowerCase() === "true";
-      if (shouldExecute) {
-        const execution = await executeRemediationProposal(proposal, {
-          openPullRequest: (Bun.env.REMEDIATION_OPEN_PR ?? "false").toLowerCase() === "true",
-          config: this.config,
-          useWorkspace: true,          expectedRepo: `${this.config.github.owner}/${this.config.github.repo}`,
-          baseBranch: this.config.github.baseBranch,
-          allowDirtyWorktree:
-            (Bun.env.REMEDIATION_ALLOW_DIRTY_WORKTREE ?? "false").toLowerCase() === "true",
-        });
-
-        console.log(
-          JSON.stringify({
-            event: "incident.remediation.executed",
-            incidentId,
-            correlationId: record.incident.correlationId,
-            branchName: execution.branchName,
-            commitSha: execution.commitSha,
-            prUrl: execution.prUrl,
-          }),
-        );
-
-        await sendSlackHook({
-          event: "resolution_outcome",
-          incidentId,
-          correlationId: record.incident.correlationId,
-          message: "Remediation executed",
-          details: {
-            outcome: "executed",
-            branchName: execution.branchName,
-            commitSha: execution.commitSha,
-            prUrl: execution.prUrl,
-          },
-        });
-      } else {
-        await sendSlackHook({
-          event: "resolution_outcome",
-          incidentId,
-          correlationId: record.incident.correlationId,
-          message: "Remediation proposal generated",
-          details: { outcome: "proposal_generated" },
-        });
-      }
 
       this.update(incidentId, "DONE");
     } catch (error) {

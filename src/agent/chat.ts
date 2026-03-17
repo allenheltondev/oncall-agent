@@ -1,4 +1,5 @@
 import type { AppConfig } from "../config/env";
+import type { Message, Tool } from "@aws-sdk/client-bedrock-runtime";
 import { executeAwsCli } from "../tools/aws-cli";
 import { ensureTeleportSession } from "../identity/teleport-session";
 import { getGitHubAppInstallationToken } from "../identity/github-app";
@@ -157,7 +158,7 @@ export async function startChat(config: AppConfig): Promise<void> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const prompt = () => new Promise<string>((resolve) => rl.question("you> ", resolve));
 
-  const messages: any[] = [];
+  const messages: Message[] = [];
 
   while (true) {
     const input = (await prompt()).trim();
@@ -178,7 +179,7 @@ export async function startChat(config: AppConfig): Promise<void> {
         modelId: config.llm.model,
         system: [{ text: systemPrompt }],
         messages,
-        toolConfig: { tools: [AWS_CLI_TOOL, SLACK_TOOL, GITHUB_API_TOOL, GIT_TOOL, FILE_TOOL] },
+        toolConfig: { tools: [AWS_CLI_TOOL, SLACK_TOOL, GITHUB_API_TOOL, GIT_TOOL, FILE_TOOL] as Tool[] },
         inferenceConfig: { maxTokens: 2048, temperature: 0.2 },
       }));
 
@@ -187,10 +188,12 @@ export async function startChat(config: AppConfig): Promise<void> {
         const assistantContent = response.output?.message?.content ?? [];
         messages.push({ role: "assistant", content: assistantContent });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const toolResults: any[] = [];
         for (const block of assistantContent) {
           if (block.toolUse) {
             const { toolUseId, name, input: toolInput } = block.toolUse;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const ti = toolInput as Record<string, any> ?? {};
             if (name === "aws_cli") {
               console.log(`  ⚡ aws ${ti.service} ${ti.command} ${(ti.args ?? []).join(" ")}`);
@@ -221,8 +224,8 @@ export async function startChat(config: AppConfig): Promise<void> {
                     body: JSON.stringify({ text: ti.message }),
                   });
                   resultText = "Message sent to Slack successfully";
-                } catch (e: any) {
-                  resultText = `Slack delivery failed: ${e.message}`;
+                } catch (e: unknown) {
+                  resultText = `Slack delivery failed: ${(e as Error).message}`;
                 }
               }
               toolResults.push({
@@ -249,9 +252,10 @@ export async function startChat(config: AppConfig): Promise<void> {
                     },
                     ...(ti.body && { body: JSON.stringify(ti.body) }),
                   });
+                  console.log(`  🐙 github response: ${res.status} ${res.statusText} (${res.headers.get("content-length") ?? "unknown"} bytes)`);
                   ghResult = await res.text();
-                } catch (e: any) {
-                  ghResult = `GitHub API error: ${e.message}`;
+                } catch (e: unknown) {
+                  ghResult = `GitHub API error: ${(e as Error).message}`;
                 }
               }
               toolResults.push({
@@ -272,8 +276,8 @@ export async function startChat(config: AppConfig): Promise<void> {
                   proc.exited,
                 ]);
                 gitResult = exitCode === 0 ? stdout || "OK" : `Error: ${stderr}`;
-              } catch (e: any) {
-                gitResult = `Git error: ${e.message}`;
+              } catch (e: unknown) {
+                gitResult = `Git error: ${(e as Error).message}`;
               }
               toolResults.push({
                 toolResult: { toolUseId, content: [{ text: gitResult }] },
@@ -305,12 +309,12 @@ export async function startChat(config: AppConfig): Promise<void> {
                 } else if (ti.operation === "list") {
                   console.log(`  📁 list ${ti.path}`);
                   const entries = await readdir(ti.path, { withFileTypes: true });
-                  fileResult = entries.map((e: any) => `${e.isDirectory() ? "d" : "f"} ${e.name}`).join("\n");
+                  fileResult = entries.map((e) => `${e.isDirectory() ? "d" : "f"} ${e.name}`).join("\n");
                 } else {
                   fileResult = `Unknown operation: ${ti.operation}`;
                 }
-              } catch (e: any) {
-                fileResult = `File error: ${e.message}`;
+              } catch (e: unknown) {
+                fileResult = `File error: ${(e as Error).message}`;
               }
               toolResults.push({
                 toolResult: { toolUseId, content: [{ text: fileResult }] },
@@ -325,7 +329,7 @@ export async function startChat(config: AppConfig): Promise<void> {
           modelId: config.llm.model,
           system: [{ text: systemPrompt }],
           messages,
-          toolConfig: { tools: [AWS_CLI_TOOL, SLACK_TOOL, GITHUB_API_TOOL, GIT_TOOL, FILE_TOOL] },
+          toolConfig: { tools: [AWS_CLI_TOOL, SLACK_TOOL, GITHUB_API_TOOL, GIT_TOOL, FILE_TOOL] as Tool[] },
           inferenceConfig: { maxTokens: 2048, temperature: 0.2 },
         }));
       }
@@ -334,10 +338,10 @@ export async function startChat(config: AppConfig): Promise<void> {
       const finalContent = response.output?.message?.content ?? [];
       messages.push({ role: "assistant", content: finalContent });
 
-      const text = finalContent.map((b: any) => b.text).filter(Boolean).join("\n");
+      const text = finalContent.map((b) => b.text).filter(Boolean).join("\n");
       console.log(`\nagent> ${text}\n`);
-    } catch (e: any) {
-      console.error(`\nerror: ${e.message}\n`);
+    } catch (e: unknown) {
+      console.error(`\nerror: ${(e as Error).message}\n`);
     }
   }
 }

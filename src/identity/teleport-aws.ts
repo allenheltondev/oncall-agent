@@ -19,10 +19,6 @@ export async function requestAwsRuntimeAccess(
   config: AppConfig,
   request: AwsRuntimeAccessRequest,
 ): Promise<AwsRuntimeAccessGrant> {
-  if (!config.teleport.proxy || !config.teleport.cluster) {
-    throw new Error("Teleport proxy/cluster must be configured for runtime identity issuance");
-  }
-
   if (config.teleport.mockIdentity) {
     const expiresAt = new Date(Date.now() + (request.ttlSeconds ?? 900) * 1000).toISOString();
     return {
@@ -32,6 +28,10 @@ export async function requestAwsRuntimeAccess(
       expiresAt,
       scope: request.scope,
     };
+  }
+
+  if (!config.teleport.proxy || !config.teleport.cluster) {
+    throw new Error("Teleport proxy/cluster must be configured for runtime identity issuance");
   }
 
   if (!config.teleport.issuerCommandAws) {

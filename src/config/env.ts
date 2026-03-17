@@ -13,9 +13,9 @@ export interface AppConfig {
     audience: string;
     mockIdentity: boolean;
     issuerCommandAws?: string;
-    issuerCommandGithub?: string;
     awsRole?: string;
-    awsAppName?: string;  };
+    awsAppName?: string;
+  };
   github: {
     owner: string;
     repo: string;
@@ -35,6 +35,9 @@ export interface AppConfig {
   storage: {
     mode: "json" | "sqlite";
     sqlitePath: string;
+  };
+  agent: {
+    maxLoops: number;
   };
 }
 
@@ -86,7 +89,7 @@ export async function loadConfig(): Promise<AppConfig> {
       mockIdentity: envBool("TELEPORT_MOCK_IDENTITY", false),
       issuerCommandAws: env("TELEPORT_ISSUER_COMMAND_AWS"),
       awsRole: env("TELEPORT_AWS_ROLE"),
-      awsAppName: env("TELEPORT_AWS_APP_NAME"),      issuerCommandGithub: env("TELEPORT_ISSUER_COMMAND_GITHUB"),
+      awsAppName: env("TELEPORT_AWS_APP_NAME"),
     },
     github: {
       owner: env("GITHUB_OWNER", "allenheltondev")!,
@@ -107,6 +110,9 @@ export async function loadConfig(): Promise<AppConfig> {
     storage: {
       mode: (env("STORAGE_MODE", "json") as "json" | "sqlite") ?? "json",
       sqlitePath: env("SQLITE_PATH", "data/oncall-agent.db")!,
+    },
+    agent: {
+      maxLoops: Number(env("AGENT_MAX_LOOPS", "30")),
     },
   };
 }

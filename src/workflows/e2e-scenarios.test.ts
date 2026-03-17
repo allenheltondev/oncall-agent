@@ -22,6 +22,5 @@ describe("runE2EScenarioFromPayload", () => {
     expect(result.incidentId).toBe("inc-e2e-1");
     expect(existsSync(result.contextPath)).toBe(true);
     expect(result.proposalBranch).toContain("agent/remediate/");
-    expect(result.governanceLogged).toBe(true);
   });
 });

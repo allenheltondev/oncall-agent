@@ -22,14 +22,6 @@ describe("SqliteStore", () => {
       timestamp: new Date().toISOString(),
     });
 
-    store.insertGovernanceEntry({
-      incidentId: "inc-sql-1",
-      action: "identity.request.aws",
-      authDecision: "allow",
-      outcome: "success",
-      timestamp: new Date().toISOString(),
-    });
-
     store.close();
     expect(existsSync(path)).toBe(true);
   });

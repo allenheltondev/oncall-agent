@@ -4,7 +4,6 @@ const SECRET_KEYS = [
   "SLACK_TOKEN",
   "MOMENTO_API_KEY",
   "TELEPORT_ISSUER_COMMAND_AWS",
-  "TELEPORT_ISSUER_COMMAND_GITHUB",
 ] as const;
 
 export function maskSecret(secret?: string | null): string | null {

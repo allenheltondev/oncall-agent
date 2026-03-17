@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import path from "path";
 import { ensureRepoWorkspace } from "./repo-workspace";
 import type { AppConfig } from "../config/env";
 
@@ -18,6 +19,6 @@ describe("ensureRepoWorkspace", () => {
 
     expect(workspace.owner).toBe("allenheltondev");
     expect(workspace.repo).toBe("oncall-agent");
-    expect(workspace.repoPath).toContain("allenheltondev" + require("path").sep + "oncall-agent");
+    expect(workspace.repoPath).toContain("allenheltondev" + path.sep + "oncall-agent");
   });
 });
