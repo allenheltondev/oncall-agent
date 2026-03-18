@@ -9,7 +9,7 @@ import { createInterface } from "node:readline";
 const AWS_CLI_TOOL = {
   toolSpec: {
     name: "aws_cli",
-    description: "Execute an AWS CLI command. Use this to inspect AWS resources like Lambda functions, CloudWatch logs/metrics, EC2 instances, DynamoDB tables, S3 buckets, etc. Results are auto-paginated. For counting resources, prefer adding a --query argument to extract just names or counts, e.g. --query 'Functions[].FunctionName' for lambda list-functions.",
+    description: "Execute an AWS CLI command. Use this to inspect AWS resources like Lambda functions, CloudWatch logs/metrics, EC2 instances, DynamoDB tables, S3 buckets, etc. Results are auto-paginated. IMPORTANT: Use s3api (not s3) for bucket operations like list-buckets. Each element in the args array is passed directly to the CLI (no shell), so do NOT use pipes (|) in args. For --query, pass the flag and its value as two separate args, e.g. args: [\"--query\", \"length(Functions)\"].",
     inputSchema: {
       json: {
         type: "object",
@@ -184,7 +184,10 @@ export async function startChat(config: AppConfig): Promise<void> {
       }));
 
       // Tool use loop
-      while (response.stopReason === "tool_use") {
+      let toolLoops = 0;
+      const maxToolLoops = config.agent.maxLoops;
+      while (response.stopReason === "tool_use" && toolLoops < maxToolLoops) {
+        toolLoops++;
         const assistantContent = response.output?.message?.content ?? [];
         messages.push({ role: "assistant", content: assistantContent });
 
@@ -324,6 +327,11 @@ export async function startChat(config: AppConfig): Promise<void> {
         }
 
         messages.push({ role: "user", content: toolResults });
+        for (const tr of toolResults) {
+          const txt = tr.toolResult?.content?.[0]?.text ?? "";
+          const preview = txt.length > 200 ? txt.slice(0, 200) + `... [${txt.length} chars]` : txt;
+          console.log(`    ↳ ${preview}`);
+        }
 
         response = await bedrock.send(new ConverseCommand({
           modelId: config.llm.model,

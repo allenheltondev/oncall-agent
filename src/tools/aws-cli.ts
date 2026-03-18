@@ -23,11 +23,16 @@ export async function executeAwsCli(
 ): Promise<AwsCliResponse> {
   const awsProfile = await ensureTeleportSession(config);
 
-  const args = [request.service, request.command, ...(request.args ?? []), "--region", config.awsRegion, "--output", "json", "--no-cli-pager"];
+  const userArgs = (request.args ?? []).map(a => a.replace(/^(['"])(.*?)\1$/, "$2"));
+  const args = [request.service, request.command, ...userArgs];
+  if (!userArgs.includes("--region")) args.push("--region", config.awsRegion);
+  if (!userArgs.includes("--output")) args.push("--output", "json");
+  args.push("--no-cli-pager");
   if (awsProfile) {
     args.push("--profile", awsProfile);
   }
 
+  console.log(`    [aws-cli] ${AWS_CLI} ${args.join(" ")}`);
   const proc = Bun.spawn([AWS_CLI, ...args], {
     stdin: "ignore",
     stdout: "pipe",

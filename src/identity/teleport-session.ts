@@ -101,5 +101,5 @@ export async function ensureTeleportSession(config: AppConfig): Promise<string |
     return profile;
   }
 
-  return status.awsProfile;
+  return status.awsProfile ?? config.teleport.awsAppName;
 }
