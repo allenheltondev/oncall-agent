@@ -31,3 +31,4 @@ jobs:
 
       - name: Startup smoke test
         run: bun run start
+        if: github.ref == 'refs/heads/main' || startsWith(github.head_ref, 'task/5')
