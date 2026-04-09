@@ -4,7 +4,6 @@
  * No implementation — types only.
  */
 
-import type { AppConfig } from "../config/env";
 import type { AuditEvent } from "../audit/audit-model";
 
 // Re-export audit types for convenience
