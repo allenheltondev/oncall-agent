@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { runDoctor } from "./doctor";
+import { runDoctor } from "./doctor-check";
 
 describe("runDoctor", () => {
   test("returns check matrix", async () => {

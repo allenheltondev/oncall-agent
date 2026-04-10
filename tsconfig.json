@@ -28,6 +28,7 @@
   },
   "exclude": [
     "test/**/*",
+    "src/**/*.test.ts",
     "node_modules"
   ]
 }
