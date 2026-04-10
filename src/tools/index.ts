@@ -4,6 +4,7 @@
  */
 
 import type { ToolDefinition, ToolRegistry } from "../tools/types";
+import type { ToolResult } from "../agent/types";
 import { getIncidentContext } from "./get-incident-context";
 import { queryLogs } from "./query-logs";
 import { queryMetrics } from "./query-metrics";
@@ -28,7 +29,7 @@ export const toolRegistry: ToolRegistry = {
       },
       required: ["incidentId"],
     },
-    handler: getIncidentContext as any,
+    handler: getIncidentContext as unknown as (args: Record<string, unknown>) => Promise<ToolResult>,
   },
 
   query_logs: {
@@ -56,7 +57,7 @@ export const toolRegistry: ToolRegistry = {
       },
       required: ["service", "startTime", "endTime"],
     },
-    handler: queryLogs as any,
+    handler: queryLogs as unknown as (args: Record<string, unknown>) => Promise<ToolResult>,
   },
 
   query_metrics: {
@@ -85,7 +86,7 @@ export const toolRegistry: ToolRegistry = {
       },
       required: ["service", "metricNames", "startTime", "endTime"],
     },
-    handler: queryMetrics as any,
+    handler: queryMetrics as unknown as (args: Record<string, unknown>) => Promise<ToolResult>,
   },
 
   post_slack_summary: {
@@ -117,7 +118,7 @@ export const toolRegistry: ToolRegistry = {
       },
       required: ["channel", "incidentId", "summary", "likelyCause", "recommendedNextStep"],
     },
-    handler: postSlackSummary as any,
+    handler: postSlackSummary as unknown as (args: Record<string, unknown>) => Promise<ToolResult>,
   },
 
   open_followup_issue: {
@@ -137,7 +138,7 @@ export const toolRegistry: ToolRegistry = {
       },
       required: ["title", "description"],
     },
-    handler: openFollowupIssue as any,
+    handler: openFollowupIssue as unknown as (args: Record<string, unknown>) => Promise<ToolResult>,
   },
 };
 
