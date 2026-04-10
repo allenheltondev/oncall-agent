@@ -29,6 +29,7 @@ data/ledger/
 # caches
 .eslintcache
 .cache
+.tmp/
 *.tsbuildinfo
 
 # IntelliJ based IDEs
