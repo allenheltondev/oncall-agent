@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { Incident } from "../types";
+import type { Incident } from "./types";
 import { AgentLoop } from "./agent-loop";
 import type { LlmOrchestrator } from "../llm/orchestrator";
 
