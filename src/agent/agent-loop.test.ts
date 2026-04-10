@@ -33,18 +33,18 @@ describe("AgentLoop", () => {
     };
 
     it("should complete investigation successfully", async () => {
-      // Mock successful incident context loading
+      // Mock LLM investigation - first call returns tool call to query logs
       mockLlmOrchestrator.run.mockResolvedValueOnce({
-        content: "TOOL_CALL: get_incident_context {\"incidentId\":\"inc-2026-04-08-001\"}",
+        text: "TOOL_CALL: query_logs {\"service\":\"checkout-api\",\"startTime\":\"2026-04-08T12:00:00Z\",\"endTime\":\"2026-04-08T12:30:00Z\"}",
         provider: "mock",
-        usage: { inputTokens: 100, outputTokens: 50 },
+        usage: { inputTokens: 150, outputTokens: 75 },
         model: "mock-model",
-        latencyMs: 500,
+        latencyMs: 600,
       });
 
-      // Mock successful investigation with final summary
+      // Mock second call returns final summary
       mockLlmOrchestrator.run.mockResolvedValueOnce({
-        content: "FINAL SUMMARY: Root cause identified - database connection pool exhausted. Recommended: increase connection pool size.",
+        text: "FINAL SUMMARY: Root cause identified - database connection pool exhausted. Recommended: increase connection pool size.",
         provider: "mock",
         usage: { inputTokens: 200, outputTokens: 100 },
         model: "mock-model",
@@ -98,15 +98,6 @@ describe("AgentLoop", () => {
     });
 
     it("should block dangerous tool calls", async () => {
-      // Mock incident context loading
-      mockLlmOrchestrator.run.mockResolvedValueOnce({
-        content: "TOOL_CALL: get_incident_context {\"incidentId\":\"inc-2026-04-08-001\"}",
-        provider: "mock",
-        usage: { inputTokens: 100, outputTokens: 50 },
-        model: "mock-model",
-        latencyMs: 500,
-      });
-
       // Mock dangerous tool call (trying to access password)
       mockLlmOrchestrator.run.mockResolvedValueOnce({
         content: "TOOL_CALL: query_logs {\"service\":\"checkout-api\",\"startTime\":\"2026-04-08T12:00:00Z\",\"endTime\":\"2026-04-08T12:30:00Z\",\"password\":\"secret\"}",

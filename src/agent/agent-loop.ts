@@ -10,7 +10,7 @@
 
 import type { Incident, AgentState, ToolCall, ToolResult, ModelMessage } from "../agent/types";
 import { SYSTEM_PROMPT } from "../agent/system-prompt";
-import { detectDangerousPatterns } from "../agent/safety-checks";
+import { checkToolCall } from "../agent/safety-checks";
 import { AuditLogger } from "../audit/audit-logger";
 import { toolRegistry } from "../tools";
 import type { LlmOrchestrator } from "../llm/orchestrator";
@@ -53,6 +53,7 @@ export class AgentLoop {
     try {
       // Step 1: Load incident context
       const contextResult = await this.loadIncidentContext(incident, auditLogger);
+      state.toolCallsExecuted = contextResult.success ? 1 : 0;
       if (!contextResult.success) {
         throw new Error(`Failed to load incident context: ${contextResult.error?.message}`);
       }
@@ -69,18 +70,17 @@ export class AgentLoop {
       state.status = investigationResult.status;
       state.finalSummary = investigationResult.summary;
       state.completedAt = new Date().toISOString();
-      state.auditTrail = auditLogger.getEvents();
-
       auditLogger.agentCompleted(state.status, state.finalSummary || undefined);
+      state.auditTrail = auditLogger.getEvents();
       return state;
 
     } catch (error) {
       state.status = "failed";
       state.completedAt = new Date().toISOString();
-      state.auditTrail = auditLogger.getEvents();
 
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       auditLogger.agentFailed(errorMessage);
+      state.auditTrail = auditLogger.getEvents();
 
       return state;
     }
@@ -157,26 +157,43 @@ export class AgentLoop {
           // Safety check
           const safetyResult = this.checkToolCallSafety(toolCall);
           if (safetyResult.isDangerous) {
+            const blockedReason = this.normalizeSafetyReason(safetyResult.reason);
             state.toolCallsBlocked++;
             state.unsafePatternsDetected++;
-            state.blockedReasons[safetyResult.reason || "unknown"] =
-              (state.blockedReasons[safetyResult.reason || "unknown"] || 0) + 1;
+            state.blockedReasons[blockedReason] = (state.blockedReasons[blockedReason] || 0) + 1;
 
             toolCall.blocked = true;
-            toolCall.blockedReason = safetyResult.reason;
+            toolCall.blockedReason = blockedReason;
             toolCall.executedAt = new Date().toISOString();
 
+            if (safetyResult.pattern && safetyResult.reason) {
+              auditLogger.unsafePatternDetected(
+                safetyResult.pattern,
+                blockedReason,
+                "tool_arguments",
+                safetyResult.confidence,
+                toolCall.name,
+              );
+            }
             auditLogger.toolCallBlocked(toolCall.name, safetyResult.reason!, safetyResult.pattern);
             continue;
           }
 
-          // Execute tool
-          const result = await this.executeTool(toolCall.name, toolCall.arguments);
+          const result = toolCall.name === "get_incident_context"
+            ? {
+                toolName: toolCall.name,
+                callId: `call_${Date.now()}`,
+                success: true,
+                output: incidentContext,
+              }
+            : await this.executeTool(toolCall.name, toolCall.arguments);
           toolCall.executedAt = new Date().toISOString();
 
-          if (result.success) {
+          if (result.success && toolCall.name !== "get_incident_context") {
             state.toolCallsExecuted++;
             auditLogger.toolCallExecuted(toolCall.name, JSON.stringify(result.output).length);
+            auditLogger.toolResultReceived(toolCall.name, JSON.stringify(result.output).length);
+          } else if (result.success) {
             auditLogger.toolResultReceived(toolCall.name, JSON.stringify(result.output).length);
           } else {
             auditLogger.toolCallFailed(toolCall.name, result.error?.message || "Unknown error");
@@ -234,12 +251,25 @@ Please investigate this incident using the available tools. When you have enough
    */
   private async callLLM(messages: ModelMessage[]): Promise<{ success: boolean; content?: string; usage?: unknown; error?: string }> {
     try {
-      const prompt = `${SYSTEM_PROMPT}\n\n${messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n')}`;
+      const prompt = `${SYSTEM_PROMPT}\n\n${messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n")}`;
       const response = await this.llm.run("incident_analysis", prompt);
+      const legacyContent = "content" in response ? response.content : undefined;
+      const content = typeof response.text === "string"
+        ? response.text
+        : typeof legacyContent === "string"
+          ? legacyContent
+          : undefined;
+
+      if (!content) {
+        return {
+          success: false,
+          error: "LLM response missing text content",
+        };
+      }
 
       return {
         success: true,
-        content: response.text,
+        content,
         usage: response.usage,
       };
     } catch (error) {
@@ -294,20 +324,15 @@ Please investigate this incident using the available tools. When you have enough
    * Check if a tool call is safe to execute.
    */
   private checkToolCallSafety(toolCall: ToolCall) {
-    // Check tool name safety
-    const nameCheck = detectDangerousPatterns(toolCall.name);
-    if (nameCheck.isDangerous) {
-      return nameCheck;
+    return checkToolCall(toolCall.name, toolCall.arguments);
+  }
+
+  private normalizeSafetyReason(reason?: string): string {
+    if (!reason) {
+      return "unknown";
     }
 
-    // Check arguments safety
-    const argsStr = JSON.stringify(toolCall.arguments);
-    const argsCheck = detectDangerousPatterns(argsStr);
-    if (argsCheck.isDangerous) {
-      return argsCheck;
-    }
-
-    return { isDangerous: false, confidence: 0 };
+    return reason.replace(/^Dangerous pattern in tool (?:name|arguments):\s*/, "");
   }
 
   /**
