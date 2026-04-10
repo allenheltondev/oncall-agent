@@ -10,11 +10,9 @@ import { AgentLoop } from "./agent-loop";
 import type { LlmOrchestrator } from "../llm/orchestrator";
 
 // Mock the LLM orchestrator
-/* eslint-disable @typescript-eslint/no-explicit-any */
 const mockLlmOrchestrator = {
-  run: vi.fn() as any,
+  run: vi.fn(),
 } as unknown as LlmOrchestrator;
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 describe("AgentLoop", () => {
   let agentLoop: AgentLoop;
