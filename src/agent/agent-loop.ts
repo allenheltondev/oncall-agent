@@ -70,7 +70,13 @@ export class AgentLoop {
       state.status = investigationResult.status;
       state.finalSummary = investigationResult.summary;
       state.completedAt = new Date().toISOString();
-      auditLogger.agentCompleted(state.status, state.finalSummary || undefined);
+
+      if (state.status === "completed") {
+        auditLogger.agentCompleted(state.status, state.finalSummary || undefined);
+      } else if (!auditLogger.getEvents().some((event) => event.eventType === "AGENT_FAILED")) {
+        auditLogger.agentFailed("Investigation failed without final summary");
+      }
+
       state.auditTrail = auditLogger.getEvents();
       return state;
 

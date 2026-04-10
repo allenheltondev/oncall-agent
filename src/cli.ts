@@ -5,7 +5,8 @@ import { startChat } from "./agent/chat";
 import { readFile, writeFile } from "node:fs/promises";
 import { runSetupWizard } from "./setup/wizard";
 import { runDoctor } from "./doctor-check";
-import { checkTeleportSession, loginTeleport } from "./identity/teleport-session";import { maskSecret } from "./security/secrets";
+import { checkTeleportSession, loginTeleport } from "./identity/teleport-session";
+import { maskSecret } from "./security/secrets";
 import { verifyGitHub } from "./identity/github-verify";
 
 interface CliOptions {

@@ -139,7 +139,7 @@ describe("AgentLoop", () => {
 
       expect(result.status).toBe("failed");
       expect(result.finalSummary).toBeNull();
-      // expect(result.auditTrail.some(event => event.eventType === "AGENT_FAILED")).toBe(true); // TODO: fix this test
+      expect(result.auditTrail.some(event => event.eventType === "AGENT_FAILED")).toBe(true);
     });
 
     it("should handle LLM failures gracefully", async () => {
